@@ -10,17 +10,17 @@ import yaml
 
 # Maps dimension numbers to human-readable names
 DIMENSION_NAMES = {
-    1: "scope clarity",
-    2: "trigger surface coverage",
-    3: "progressive disclosure",
-    4: "resource hygiene",
-    5: "script vs prose",
-    6: "instructional voice",
-    7: "output contract",
-    8: "examples",
-    9: "error handling",
-    10: "metadata quality",
-    11: "testability",
+    1: "Description Triggering",
+    2: "Trigger Surface Coverage",
+    3: "Progressive Disclosure",
+    4: "Resource Hygiene",
+    5: "Script vs. Prose Allocation",
+    6: "Instructional Voice",
+    7: "Output Contract",
+    8: "Examples",
+    9: "Environment Portability",
+    10: "Least Surprise / Safety",
+    11: "Testability",
 }
 
 # (minimum_score, grade) — checked in order, first match wins
