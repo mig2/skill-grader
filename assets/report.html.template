@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Skill Grade Report — {{ skill_name }}</title>
+  <style>
+{{ css }}
+  </style>
+</head>
+<body>
+  <div class="container">
+
+    <!-- Score Header -->
+    <div class="score-header">
+      <div class="grade-badge grade-{{ grade_class }}">{{ letter_grade }}</div>
+      <div class="score-info">
+        <h1>{{ skill_name }}</h1>
+        <div class="score-number">{{ overall_score }} / 100</div>
+        <div class="score-meta">Profile: {{ profile }}{% if baseline_status == "compared" %} &mdash; {{ delta_summary }}{% endif %}</div>
+        {% if capped_by_blocker %}<div class="blocker-cap">&#9888; Grade capped by blocker finding</div>{% endif %}
+      </div>
+    </div>
+
+    <!-- Dimension Scores -->
+    <h2>Dimension Scores</h2>
+    <table class="dimension-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Dimension</th>
+          <th>Score</th>
+          <th>Weight</th>
+          {% if has_delta %}<th>Delta</th>{% endif %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for dim in dimensions %}
+        <tr{% if dim.na %} class="na-row"{% endif %}>
+          <td>{{ dim.number }}</td>
+          <td>{{ dim.name }}</td>
+          {% if dim.na %}
+          <td><em>N/A</em></td>
+          <td>&mdash;</td>
+          {% else %}
+          <td>{{ dim.score }} / 4</td>
+          <td>{{ dim.weight }}</td>
+          {% endif %}
+          {% if has_delta %}
+          <td>
+            {% if dim.na %}
+            <span class="delta-zero">&mdash;</span>
+            {% elif dim.delta is none %}
+            <span class="delta-zero">&mdash;</span>
+            {% elif dim.delta > 0 %}
+            <span class="delta-positive">+{{ dim.delta }}</span>
+            {% elif dim.delta < 0 %}
+            <span class="delta-negative">{{ dim.delta }}</span>
+            {% else %}
+            <span class="delta-zero">0</span>
+            {% endif %}
+          </td>
+          {% endif %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <!-- Findings -->
+    {% set has_findings = namespace(value=false) %}
+    {% for sev in severity_order %}{% if findings_by_severity.get(sev) %}{% set has_findings.value = true %}{% endif %}{% endfor %}
+
+    {% if has_findings.value %}
+    <h2>Findings</h2>
+    <div class="findings-section">
+      {% for sev in severity_order %}
+      {% if findings_by_severity.get(sev) %}
+      <h3 class="severity-{{ sev }}">{{ sev | upper }}</h3>
+      {% for finding in findings_by_severity[sev] %}
+      <div class="finding-card severity-{{ sev }}">
+        <div class="finding-header">
+          <span class="severity-tag severity-{{ sev }}">{{ sev }}</span>
+          <span class="finding-dimension">Dim {{ finding.dimension }} &mdash; {{ finding.dimension_name }}</span>
+          {% if finding.location %}<span class="finding-location">{{ finding.location }}</span>{% endif %}
+        </div>
+        <div class="finding-problem">{{ finding.problem }}</div>
+        {% if finding.suggested_fix %}<div class="finding-fix">{{ finding.suggested_fix }}</div>{% endif %}
+      </div>
+      {% endfor %}
+      {% endif %}
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Footer -->
+    <footer>
+      Profile: {{ profile }} &mdash; Generated: {{ timestamp }}
+    </footer>
+
+  </div>
+</body>
+</html>
