@@ -182,8 +182,10 @@ def render_html(grade_result: dict) -> str:
     css = css_path.read_text(encoding="utf-8")
 
     # Skill name from scan or fallback
-    skill_path = scan.get("skill_path", "Unknown Skill")
-    skill_name = Path(skill_path).name if skill_path else "Unknown Skill"
+    skill_path = scan.get("skill_path", "")
+    skill_name = Path(skill_path).resolve().name if skill_path else "Unknown Skill"
+    if not skill_name:
+        skill_name = "Unknown Skill"
 
     # Build dimensions list
     has_delta = delta is not None

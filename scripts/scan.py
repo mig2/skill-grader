@@ -324,7 +324,7 @@ def scan_skill(skill_path: Path) -> dict:
     deterministic_prose_signals = _find_deterministic_prose(skill_lines)
 
     return {
-        "skill_path": str(skill_path),
+        "skill_path": str(skill_path.resolve()),
         "skill_md_lines": skill_md_lines,
         "orphaned_files": orphaned,
         "dangling_refs": dangling,
