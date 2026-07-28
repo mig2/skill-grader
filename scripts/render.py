@@ -13,6 +13,13 @@ ASSETS_DIR = Path(__file__).parent.parent / "assets"
 SEVERITY_ORDER = ["blocker", "major", "minor", "nit"]
 
 
+def _get_flex(d: dict, key: int):
+    """Look up by int key first, then str — handles JSON round-trip."""
+    if key in d:
+        return d[key]
+    return d.get(str(key))
+
+
 def _format_delta(value: int | float | None) -> str:
     """Format a delta value with sign."""
     if value is None:
@@ -88,14 +95,14 @@ def render_markdown(grade_result: dict) -> str:
             score_cell = "N/A"
             weight_cell = "—"
         else:
-            detail = dimension_details.get(dim_num) or {}
-            score = detail.get("score") if detail else dimension_scores.get(dim_num, "?")
+            detail = _get_flex(dimension_details, dim_num) or {}
+            score = detail.get("score") if detail else (_get_flex(dimension_scores, dim_num) or "?")
             weight = detail.get("weight", 1.0) if detail else 1.0
             score_cell = f"{score} / 4"
             weight_cell = str(weight)
 
         if has_delta_col:
-            delta_val = delta.get(dim_num) if delta else None
+            delta_val = _get_flex(delta, dim_num) if delta else None
             delta_cell = _format_delta(delta_val) if delta_val is not None else "—"
             lines.append(f"| {dim_num} | {name} | {score_cell} | {weight_cell} | {delta_cell} |")
         else:
@@ -165,7 +172,7 @@ def render_html(grade_result: dict) -> str:
     dimension_details = grade_result.get("dimension_details") or {}
     dimension_scores = grade_result.get("dimension_scores") or {}
     findings = grade_result.get("findings") or []
-    scan = grade_result.get("scan") or {}
+    scan = grade_result.get("scan") or grade_result.get("scan_result") or {}
 
     # grade_class: first letter of grade, lowercased (handles A+, B-, etc.)
     grade_class = letter[0].lower()
@@ -184,10 +191,11 @@ def render_html(grade_result: dict) -> str:
     for dim_num in range(1, 12):
         name = DIMENSION_NAMES.get(dim_num, f"Dim {dim_num}")
         is_na = dim_num in na_dims
-        detail = dimension_details.get(dim_num) or {}
-        score = detail.get("score") if detail else dimension_scores.get(dim_num)
+        # Keys may be int or str after JSON round-trip
+        detail = _get_flex(dimension_details, dim_num) or {}
+        score = detail.get("score") if detail else _get_flex(dimension_scores, dim_num)
         weight = detail.get("weight", 1.0) if detail else 1.0
-        delta_val = delta.get(dim_num) if delta else None
+        delta_val = _get_flex(delta, dim_num) if delta else None
         dimensions.append({
             "number": dim_num,
             "name": name,
