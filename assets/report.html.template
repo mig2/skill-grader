@@ -22,6 +22,8 @@
       </div>
     </div>
 
+    {% if mode_note %}<div class="mode-note">{{ mode_note }}</div>{% endif %}
+
     <!-- Dimension Scores -->
     <h2>Dimension Scores</h2>
     <table class="dimension-table">

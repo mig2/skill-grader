@@ -1,6 +1,7 @@
 """Tests for scan.py mechanical checks."""
 
 import json
+import subprocess
 from pathlib import Path
 from scripts.scan import scan_skill
 
@@ -93,6 +94,77 @@ class TestScanOutput:
             "dangling_refs", "caps_density", "caps_lines",
             "large_refs_without_toc", "has_scripts", "has_evals",
             "duplicated_blocks", "bundled_files", "referenced_files",
-            "deterministic_prose_signals",
+            "deterministic_prose_signals", "mode",
         }
         assert expected_keys.issubset(result.keys())
+
+
+def _make_skill(root, *, stamp=False, git=False, extra=()):
+    """Build a minimal skill directory for mode/furniture tests."""
+    root.mkdir(parents=True, exist_ok=True)
+    (root / "SKILL.md").write_text("# Skill\n\nSee references/guide.md\n")
+    (root / "references").mkdir(exist_ok=True)
+    (root / "references" / "guide.md").write_text("# Guide\n")
+    if stamp:
+        (root / ".installed-from").write_text("abc1234\n")
+    if git:
+        (root / ".git").mkdir(exist_ok=True)
+    for rel in extra:
+        p = root / rel
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text("# filler\n")
+    return root
+
+
+class TestModeDetection:
+    def test_installed_from_stamp_means_installed(self, tmp_path):
+        skill = _make_skill(tmp_path / "s", stamp=True)
+        assert scan_skill(skill)["mode"] == "installed"
+
+    def test_git_dir_means_codebase(self, tmp_path):
+        skill = _make_skill(tmp_path / "s", git=True)
+        assert scan_skill(skill)["mode"] == "codebase"
+
+    def test_stamp_wins_over_git(self, tmp_path):
+        skill = _make_skill(tmp_path / "s", stamp=True, git=True)
+        assert scan_skill(skill)["mode"] == "installed"
+
+    def test_bare_directory_defaults_to_codebase(self, tmp_path):
+        skill = _make_skill(tmp_path / "s")
+        assert scan_skill(skill)["mode"] == "codebase"
+
+
+class TestFurnitureExclusion:
+    FURNITURE = ("docs/plan.md", "README.md", "LICENSE.md", "install.sh")
+
+    def test_codebase_mode_ignores_furniture(self, tmp_path):
+        skill = _make_skill(
+            tmp_path / "s", git=True,
+            extra=self.FURNITURE + ("references/orphan.md",),
+        )
+        orphans = scan_skill(skill)["orphaned_files"]
+        assert orphans == ["references/orphan.md"]
+
+    def test_installed_mode_counts_furniture(self, tmp_path):
+        skill = _make_skill(tmp_path / "s", stamp=True, extra=self.FURNITURE)
+        orphans = scan_skill(skill)["orphaned_files"]
+        assert "docs/plan.md" in orphans
+        assert "README.md" in orphans
+
+    def test_gitignored_output_is_not_an_orphan(self, tmp_path):
+        """Generated output the repo already declares non-source is excluded."""
+        skill = _make_skill(
+            tmp_path / "s", extra=("grade.md", "references/orphan.md"),
+        )
+        (skill / ".gitignore").write_text("grade.md\n")
+        subprocess.run(["git", "init", "-q"], cwd=skill, check=True)
+
+        orphans = scan_skill(skill)["orphaned_files"]
+        assert orphans == ["references/orphan.md"]
+
+    def test_furniture_only_matched_at_root(self, tmp_path):
+        """A docs/ path nested under references/ is still a real orphan."""
+        skill = _make_skill(
+            tmp_path / "s", git=True, extra=("references/docs/deep.md",),
+        )
+        assert scan_skill(skill)["orphaned_files"] == ["references/docs/deep.md"]

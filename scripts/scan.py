@@ -7,6 +7,7 @@ All checks are purely mechanical: counts, file graph analysis, pattern matching.
 from __future__ import annotations
 
 import re
+import subprocess
 from pathlib import Path
 
 
@@ -25,6 +26,22 @@ CAPS_WORDS = re.compile(
 
 EVAL_DIRS = {"tests", "test", "evals", "eval"}
 
+SKILLS_DIR = Path.home() / ".claude" / "skills"
+
+# Development artifacts that belong in a source repo but are not skill
+# resources. Excluded from orphan detection in codebase mode only — in
+# installed mode their presence is genuinely unexpected.
+FURNITURE_PATTERNS = [
+    re.compile(p) for p in [
+        r"^docs/",
+        r"^README(\.[^.]+)?$",
+        r"^CHANGELOG(\.[^.]+)?$",
+        r"^CONTRIBUTING(\.[^.]+)?$",
+        r"^LICENSE(\.[^.]+)?$",
+        r"^install\.sh$",
+    ]
+]
+
 TOC_MARKER = re.compile(r"^\s*-\s*\[.+\]\(#", re.MULTILINE)
 
 DETERMINISTIC_PATTERNS = [
@@ -42,6 +59,58 @@ DETERMINISTIC_PATTERNS = [
 # ---------------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------------
+
+def _detect_mode(skill_path: Path) -> str:
+    """Classify the target as an installed skill or a source codebase.
+
+    The two are different objects and score differently — an installed copy
+    legitimately ships without tests, a repo legitimately carries docs and
+    plans. Naming which one was graded keeps the score interpretable.
+
+    Signal order runs strongest to weakest: an explicit installer stamp, then
+    version control, then location. A repo symlinked into the skills directory
+    resolves to its real path and correctly reads as a codebase.
+    """
+    if (skill_path / ".installed-from").exists():
+        return "installed"
+    if (skill_path / ".git").exists():
+        return "codebase"
+    try:
+        skill_path.relative_to(SKILLS_DIR)
+        return "installed"
+    except ValueError:
+        return "codebase"
+
+
+def _is_furniture(rel_path: str) -> bool:
+    """True if a path is repo furniture rather than a skill resource."""
+    return any(p.search(rel_path) for p in FURNITURE_PATTERNS)
+
+
+def _gitignored(skill_path: Path, candidates: list[str]) -> set[str]:
+    """Return the candidates git considers ignored.
+
+    Generated output (reports, build artifacts) is not a skill resource, and
+    the repo already declares what it is via .gitignore. Returns an empty set
+    if git is unavailable, so the caller degrades to counting everything.
+    """
+    if not candidates or not (skill_path / ".git").exists():
+        return set()
+    try:
+        proc = subprocess.run(
+            ["git", "-C", str(skill_path), "check-ignore", "--stdin"],
+            input="\n".join(candidates),
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return set()
+    # 0 = some paths ignored, 1 = none ignored; anything else is an error.
+    if proc.returncode not in (0, 1):
+        return set()
+    return {line.strip() for line in proc.stdout.splitlines() if line.strip()}
+
 
 def _find_bundled_files(skill_path: Path) -> list[str]:
     """Return all content files as relative path strings, excluding dotfiles."""
@@ -272,8 +341,11 @@ def _find_deterministic_prose(lines: list[str]) -> list[str]:
 
 def scan_skill(skill_path: Path) -> dict:
     """Scan a skill directory and return a dict of mechanical measurements."""
-    skill_path = Path(skill_path)
+    # Resolve up front so mode detection sees through symlinks: a repo linked
+    # into the skills directory is still a codebase.
+    skill_path = Path(skill_path).resolve()
     skill_md = skill_path / "SKILL.md"
+    mode = _detect_mode(skill_path)
 
     # Read SKILL.md
     if skill_md.exists():
@@ -296,6 +368,10 @@ def scan_skill(skill_path: Path) -> dict:
         b for b in bundled
         if b not in referenced_set and Path(b).name != "SKILL.md"
     ]
+    if mode == "codebase":
+        orphaned = [b for b in orphaned if not _is_furniture(b)]
+        ignored = _gitignored(skill_path, orphaned)
+        orphaned = [b for b in orphaned if b not in ignored]
 
     # Dangling refs: referenced but not bundled
     bundled_set = set(bundled)
@@ -324,7 +400,8 @@ def scan_skill(skill_path: Path) -> dict:
     deterministic_prose_signals = _find_deterministic_prose(skill_lines)
 
     return {
-        "skill_path": str(skill_path.resolve()),
+        "skill_path": str(skill_path),
+        "mode": mode,
         "skill_md_lines": skill_md_lines,
         "orphaned_files": orphaned,
         "dangling_refs": dangling,

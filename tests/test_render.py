@@ -77,6 +77,33 @@ class TestRenderMarkdown:
         assert "+1" in md or "regression" in md.lower()
 
 
+class TestModeNote:
+    def _with_mode(self, mode):
+        result = _make_grade_result()
+        result["scan"]["mode"] = mode
+        return result
+
+    def test_installed_note_points_at_codebase(self):
+        md = render_markdown(self._with_mode("installed"))
+        assert "installed skill" in md
+        assert "source codebase" in md
+
+    def test_codebase_note_points_at_installed(self):
+        md = render_markdown(self._with_mode("codebase"))
+        assert "skill codebase" in md
+        assert "installed skill" in md
+
+    def test_note_appears_in_html(self):
+        html = render_html(self._with_mode("installed"))
+        assert "mode-note" in html
+        assert "installed skill" in html
+
+    def test_absent_mode_renders_no_note(self):
+        md = render_markdown(_make_grade_result())
+        assert "installed skill" not in md
+        assert "skill codebase" not in md
+
+
 class TestRenderHtml:
     def test_contains_html_structure(self):
         html = render_html(_make_grade_result())

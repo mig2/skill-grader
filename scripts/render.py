@@ -12,6 +12,20 @@ from scripts.score import DIMENSION_NAMES
 ASSETS_DIR = Path(__file__).parent.parent / "assets"
 SEVERITY_ORDER = ["blocker", "major", "minor", "nit"]
 
+# A grade is uninterpretable without knowing what was graded. An installed
+# skill and its source repo are different objects and score differently.
+MODE_NOTES = {
+    "installed": (
+        "Evaluating the installed skill. D11 (Testability) reflects what "
+        "ships — for full coverage, grade the source codebase."
+    ),
+    "codebase": (
+        "Evaluating the skill codebase. Repo furniture (docs/, README) is "
+        "excluded from resource-hygiene checks — for the deployed surface, "
+        "grade the installed skill."
+    ),
+}
+
 
 def _get_flex(d: dict, key: int):
     """Look up by int key first, then str — handles JSON round-trip."""
@@ -41,6 +55,8 @@ def render_markdown(grade_result: dict) -> str:
     dimension_details = grade_result.get("dimension_details") or {}
     dimension_scores = grade_result.get("dimension_scores") or {}
     findings = grade_result.get("findings") or []
+    scan = grade_result.get("scan") or grade_result.get("scan_result") or {}
+    mode_note = MODE_NOTES.get(scan.get("mode", ""))
 
     lines: list[str] = []
 
@@ -49,6 +65,10 @@ def render_markdown(grade_result: dict) -> str:
     lines.append("")
     lines.append(f"**Grade:** {letter}  |  **Score:** {overall} / 100  |  **Profile:** {profile}")
     lines.append("")
+
+    if mode_note:
+        lines.append(f"> {mode_note}")
+        lines.append("")
 
     if capped:
         lines.append("> **Warning:** Grade capped by blocker finding.")
@@ -174,6 +194,8 @@ def render_html(grade_result: dict) -> str:
     findings = grade_result.get("findings") or []
     scan = grade_result.get("scan") or grade_result.get("scan_result") or {}
 
+    mode_note = MODE_NOTES.get(scan.get("mode", ""))
+
     # grade_class: first letter of grade, lowercased (handles A+, B-, etc.)
     grade_class = letter[0].lower()
 
@@ -245,6 +267,7 @@ def render_html(grade_result: dict) -> str:
     html = template.render(
         skill_name=skill_name,
         css=css,
+        mode_note=mode_note,
         letter_grade=letter,
         grade_class=grade_class,
         overall_score=overall,

@@ -92,6 +92,16 @@ body {
   font-size: 0.875rem;
 }
 
+.mode-note {
+  background: var(--bg-card);
+  border-left: 3px solid var(--accent);
+  border-radius: 0 4px 4px 0;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  padding: 0.6rem 0.9rem;
+  margin-bottom: 1.5rem;
+}
+
 .blocker-cap {
   background: rgba(248, 81, 73, 0.15);
   border: 1px solid var(--severity-blocker);
