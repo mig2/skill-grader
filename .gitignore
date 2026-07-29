@@ -4,3 +4,14 @@ __pycache__/
 *.egg-info/
 dist/
 .skill-grader/
+
+# Generated grade outputs
+grade.md
+grade.html
+grade.json
+grade-*.md
+grade-*.html
+grade-*.json
+self-grade.md
+self-grade.html
+self-grade.json
