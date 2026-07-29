@@ -11,7 +11,7 @@ description: >
 
 ## Purpose
 
-skill-grader evaluates a Claude Skill against an 11-dimension rubric and produces a structured grade report. It measures description quality, trigger coverage, structural hygiene, scripting discipline, voice, output contracts, examples, portability, safety, and testability. It does not rewrite, fix, or author skills — it diagnoses them. Use the findings as input to a revision pass, not as a rewrite directive.
+skill-grader evaluates a Claude Skill against an 11-dimension rubric and produces a structured grade report. For repo layout, install instructions, and background, see `README.md`. It measures description quality, trigger coverage, structural hygiene, scripting discipline, voice, output contracts, examples, portability, safety, and testability. It does not rewrite, fix, or author skills — it diagnoses them. Use the findings as input to a revision pass, not as a rewrite directive.
 
 ---
 
