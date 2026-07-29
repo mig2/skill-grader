@@ -151,6 +151,27 @@ class TestFurnitureExclusion:
         assert "docs/plan.md" in orphans
         assert "README.md" in orphans
 
+    def test_file_referenced_only_from_a_script_is_not_an_orphan(self, tmp_path):
+        """A template loaded by code is used, even if no prose names it."""
+        skill = _make_skill(tmp_path / "s", stamp=True)
+        # SKILL.md names the script; only the template's discovery is under test.
+        (skill / "SKILL.md").write_text(
+            "# Skill\n\nSee references/guide.md\n\nRun scripts/render.py\n"
+        )
+        (skill / "assets").mkdir()
+        (skill / "assets" / "report.template").write_text("<html></html>")
+        (skill / "scripts").mkdir()
+        (skill / "scripts" / "render.py").write_text(
+            'TEMPLATE = "assets/report.template"\n'
+        )
+        assert scan_skill(skill)["orphaned_files"] == []
+
+    def test_package_marker_is_never_an_orphan(self, tmp_path):
+        skill = _make_skill(tmp_path / "s", stamp=True)
+        (skill / "scripts").mkdir()
+        (skill / "scripts" / "__init__.py").write_text("")
+        assert scan_skill(skill)["orphaned_files"] == []
+
     def test_gitignored_output_is_not_an_orphan(self, tmp_path):
         """Generated output the repo already declares non-source is excluded."""
         skill = _make_skill(

@@ -26,6 +26,17 @@ CAPS_WORDS = re.compile(
 
 EVAL_DIRS = {"tests", "test", "evals", "eval"}
 
+# Files scanned for references to other bundled files. Includes scripts, since
+# a template or config loaded by code is referenced just as surely as one named
+# in prose.
+REFERENCE_SOURCE_EXTENSIONS = {
+    ".md", ".txt", ".yaml", ".yml", ".py", ".sh", ".bash", ".js", ".ts",
+}
+
+# Never counted as orphans: package markers exist for the interpreter, not to
+# be linked from prose.
+NEVER_ORPHAN_NAMES = {"__init__.py"}
+
 SKILLS_DIR = Path.home() / ".claude" / "skills"
 
 # Development artifacts that belong in a source repo but are not skill
@@ -126,11 +137,15 @@ def _find_bundled_files(skill_path: Path) -> list[str]:
 
 
 def _collect_md_text(skill_path: Path, bundled: list[str]) -> str:
-    """Read all .md and .txt and .yaml files in the skill for ref scanning."""
+    """Read every text-bearing bundled file for reference scanning.
+
+    Scripts count as reference sources, not just prose: a template loaded by
+    render.py is genuinely used, and calling it orphaned is a false positive.
+    """
     texts = []
     for rel in bundled:
         p = skill_path / rel
-        if p.suffix in {".md", ".txt", ".yaml", ".yml"}:
+        if p.suffix in REFERENCE_SOURCE_EXTENSIONS:
             try:
                 texts.append(p.read_text(encoding="utf-8", errors="replace"))
             except OSError:
@@ -366,7 +381,9 @@ def scan_skill(skill_path: Path) -> dict:
     referenced_set = set(referenced)
     orphaned = [
         b for b in bundled
-        if b not in referenced_set and Path(b).name != "SKILL.md"
+        if b not in referenced_set
+        and Path(b).name != "SKILL.md"
+        and Path(b).name not in NEVER_ORPHAN_NAMES
     ]
     if mode == "codebase":
         orphaned = [b for b in orphaned if not _is_furniture(b)]
