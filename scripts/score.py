@@ -93,13 +93,15 @@ def compute_score(
     profiles = load_profiles(profiles_path)
     profile = profiles[profile_name]
     weights = profile["weights"]
-    na_dims = set(profile["na"]) | set(extra_na or [])
+    unscoreable = set(extra_na or [])
+    na_dims = set(profile["na"])
+    excluded = na_dims | unscoreable
 
     # Build applicable dimension list
     applicable = {
         dim: score
         for dim, score in dimension_scores.items()
-        if dim not in na_dims
+        if dim not in excluded
     }
 
     if not applicable:
@@ -116,7 +118,19 @@ def compute_score(
         max_possible = weight_total * 4
         overall = round((weighted_sum / max_possible) * 100, 4) if max_possible else 0.0
 
-    if blockers:
+    # A target that cannot supply evidence for some dimensions yields a partial
+    # assessment, and a partial assessment gets no headline grade. Excluding a
+    # dimension renormalises over what is left, so a target missing exactly the
+    # dimensions where a skill is weak would score *higher* than the full one.
+    # There is no denominator that makes 10-of-12 comparable to 12-of-12, so the
+    # honest output is the per-dimension detail and the findings, not a number
+    # that invites the comparison.
+    partial = bool(unscoreable)
+
+    if partial:
+        overall = None
+        letter = None
+    elif blockers:
         letter = "F"
     else:
         letter = to_letter_grade(overall)
@@ -137,7 +151,12 @@ def compute_score(
     return {
         "overall_score": overall,
         "letter_grade": letter,
+        "partial_assessment": partial,
+        # Excluded for different reasons, and the report must say which:
+        # na_dimensions do not apply to this archetype; unscoreable_dimensions
+        # apply fine but this copy of the skill cannot evidence them.
         "na_dimensions": sorted(na_dims),
+        "unscoreable_dimensions": sorted(unscoreable),
         "capped_by_blocker": blockers,
         "profile": profile_name,
         "dimension_scores": dimension_scores,

@@ -17,9 +17,10 @@ SEVERITY_ORDER = ["blocker", "major", "minor", "nit"]
 MODE_NOTES = {
     "installed": (
         "Evaluating the installed skill — the copy that actually runs. Neither "
-        "tests nor evals belong in an install payload, so D11 and D12 are "
-        "marked N/A rather than scored 0: grade the source codebase to say "
-        "anything about verification."
+        "tests nor evals belong in an install payload, so the verification "
+        "dimensions cannot be assessed here and no overall grade is given. "
+        "This target answers whether what is deployed is current, complete and "
+        "safe; grade the source checkout to ask whether the skill is good."
     ),
     "codebase": (
         "Evaluating the skill codebase. Repo furniture (docs/, README) is "
@@ -87,6 +88,8 @@ def render_markdown(grade_result: dict) -> str:
     profile = grade_result.get("profile", "unknown")
     capped = grade_result.get("capped_by_blocker", False)
     na_dims = grade_result.get("na_dimensions") or []
+    unscoreable = grade_result.get("unscoreable_dimensions") or []
+    partial = grade_result.get("partial_assessment", False)
     delta = grade_result.get("delta")
     baseline_status = grade_result.get("baseline_status", "initial")
     dimension_details = grade_result.get("dimension_details") or {}
@@ -94,13 +97,28 @@ def render_markdown(grade_result: dict) -> str:
     findings = grade_result.get("findings") or []
     scan = grade_result.get("scan") or grade_result.get("scan_result") or {}
     mode_note = MODE_NOTES.get(scan.get("mode", ""))
+    excluded = set(na_dims) | set(unscoreable)
 
     lines: list[str] = []
 
     # Score header
     lines.append(f"# Skill Grade Report")
     lines.append("")
-    lines.append(f"**Grade:** {letter}  |  **Score:** {overall} / 100  |  **Profile:** {profile}")
+    if partial:
+        missing = ", ".join(
+            f"D{n} ({DIMENSION_NAMES.get(n, '?')})" for n in sorted(unscoreable)
+        )
+        lines.append(f"**Partial assessment — no overall grade.**  |  **Profile:** {profile}")
+        lines.append("")
+        lines.append(
+            f"> {missing} cannot be assessed on this target. Excluding them "
+            f"would renormalise over the rest, so a target missing exactly the "
+            f"dimensions where a skill is weak would score better than a "
+            f"complete one. Read the per-dimension scores and findings below; "
+            f"grade the source checkout for a comparable overall grade."
+        )
+    else:
+        lines.append(f"**Grade:** {letter}  |  **Score:** {overall} / 100  |  **Profile:** {profile}")
     lines.append("")
 
     if mode_note:
@@ -120,7 +138,14 @@ def render_markdown(grade_result: dict) -> str:
         na_names = ", ".join(
             f"{n} ({DIMENSION_NAMES.get(n, '?')})" for n in sorted(na_dims)
         )
-        lines.append(f"**N/A Dimensions:** {na_names}")
+        lines.append(f"**N/A for this archetype:** {na_names}")
+        lines.append("")
+
+    if unscoreable:
+        un_names = ", ".join(
+            f"{n} ({DIMENSION_NAMES.get(n, '?')})" for n in sorted(unscoreable)
+        )
+        lines.append(f"**Not assessable on this target:** {un_names}")
         lines.append("")
 
     if baseline_status == "compared" and delta is not None:
@@ -151,10 +176,9 @@ def render_markdown(grade_result: dict) -> str:
 
     for dim_num in sorted(DIMENSION_NAMES):
         name = DIMENSION_NAMES.get(dim_num, f"Dim {dim_num}")
-        is_na = dim_num in na_dims
 
-        if is_na:
-            score_cell = "N/A"
+        if dim_num in excluded:
+            score_cell = "N/A" if dim_num in na_dims else "not assessable"
             weight_cell = "—"
         else:
             detail = _get_flex(dimension_details, dim_num) or {}
@@ -230,17 +254,33 @@ def render_html(grade_result: dict) -> str:
     profile = grade_result.get("profile", "unknown")
     capped = grade_result.get("capped_by_blocker", False)
     na_dims = set(grade_result.get("na_dimensions") or [])
+    unscoreable = set(grade_result.get("unscoreable_dimensions") or [])
+    partial = grade_result.get("partial_assessment", False)
     delta = grade_result.get("delta")
     baseline_status = grade_result.get("baseline_status", "initial")
     dimension_details = grade_result.get("dimension_details") or {}
     dimension_scores = grade_result.get("dimension_scores") or {}
     findings = grade_result.get("findings") or []
     scan = grade_result.get("scan") or grade_result.get("scan_result") or {}
+    excluded = na_dims | unscoreable
 
     mode_note = MODE_NOTES.get(scan.get("mode", ""))
 
-    # grade_class: first letter of grade, lowercased (handles A+, B-, etc.)
-    grade_class = letter[0].lower()
+    # A partial assessment has no letter to badge. Show the dash rather than
+    # inventing a grade the evidence does not support.
+    grade_class = letter[0].lower() if letter else "partial"
+    letter_display = letter if letter else "—"
+    partial_note = None
+    if partial:
+        missing = ", ".join(
+            f"D{n} ({DIMENSION_NAMES.get(n, '?')})" for n in sorted(unscoreable)
+        )
+        partial_note = (
+            f"Partial assessment: {missing} cannot be assessed on this target. "
+            f"No overall grade is given, because excluding them renormalises "
+            f"over the rest and would flatter a target that simply carries "
+            f"less evidence. Grade the source checkout for a comparable score."
+        )
 
     # Read CSS
     css_path = ASSETS_DIR / "report.css.template"
@@ -257,7 +297,6 @@ def render_html(grade_result: dict) -> str:
     dimensions = []
     for dim_num in sorted(DIMENSION_NAMES):
         name = DIMENSION_NAMES.get(dim_num, f"Dim {dim_num}")
-        is_na = dim_num in na_dims
         # Keys may be int or str after JSON round-trip
         detail = _get_flex(dimension_details, dim_num) or {}
         score = detail.get("score") if detail else _get_flex(dimension_scores, dim_num)
@@ -268,7 +307,8 @@ def render_html(grade_result: dict) -> str:
             "name": name,
             "score": score,
             "weight": weight,
-            "na": is_na,
+            "na": dim_num in excluded,
+            "unscoreable": dim_num in unscoreable,
             "delta": delta_val,
         })
 
@@ -312,7 +352,9 @@ def render_html(grade_result: dict) -> str:
         css=css,
         mode_note=mode_note,
         stale_note=describe_staleness(scan),
-        letter_grade=letter,
+        letter_grade=letter_display,
+        partial=partial,
+        partial_note=partial_note,
         grade_class=grade_class,
         overall_score=overall,
         profile=profile,
@@ -322,6 +364,7 @@ def render_html(grade_result: dict) -> str:
         has_delta=has_delta,
         dimensions=dimensions,
         na_dimensions=na_dims,
+        unscoreable_dimensions=unscoreable,
         severity_order=SEVERITY_ORDER,
         findings_by_severity=findings_by_severity,
         timestamp=timestamp,

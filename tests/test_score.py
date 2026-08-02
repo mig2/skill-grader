@@ -113,16 +113,28 @@ class TestUnscoreableDimensions:
     def test_missing_scan_is_safe(self):
         assert unscoreable_dimensions(None) == []
 
-    def test_installed_grade_renormalises_over_ten_dimensions(self):
+    def test_partial_assessment_yields_no_headline_grade(self):
+        """Renormalising over the rest would flatter a target that simply
+        carries less evidence, so a partial assessment reports no score."""
         scores = {i: 4 for i in range(1, 13)}
         scores[11] = 0
         scores[12] = 0
         result = compute_score(
             scores, "balanced", PROFILES_PATH, extra_na=[11, 12],
         )
-        # Perfect on every dimension the target can speak to.
+        assert result["partial_assessment"] is True
+        assert result["overall_score"] is None
+        assert result["letter_grade"] is None
+        assert result["unscoreable_dimensions"] == [11, 12]
+        # Excluded for a target reason, not an archetype one.
+        assert result["na_dimensions"] == []
+
+    def test_complete_assessment_still_grades(self):
+        scores = {i: 4 for i in range(1, 13)}
+        result = compute_score(scores, "balanced", PROFILES_PATH)
+        assert result["partial_assessment"] is False
         assert result["overall_score"] == 100.0
-        assert 11 in result["na_dimensions"] and 12 in result["na_dimensions"]
+        assert result["letter_grade"] == "A+"
 
     def test_build_grade_result_applies_mode(self):
         scores = {i: 4 for i in range(1, 13)}
@@ -131,8 +143,9 @@ class TestUnscoreableDimensions:
         gr = build_grade_result(
             scores, [], {"mode": "installed"}, "balanced", PROFILES_PATH,
         )
-        assert gr["overall_score"] == 100.0
-        assert sorted(gr["na_dimensions"]) == [11, 12]
+        assert gr["partial_assessment"] is True
+        assert gr["overall_score"] is None
+        assert sorted(gr["unscoreable_dimensions"]) == [11, 12]
 
 
 class TestDimensionDetails:

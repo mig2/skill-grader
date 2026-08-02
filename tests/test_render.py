@@ -86,7 +86,7 @@ class TestModeNote:
     def test_installed_note_points_at_codebase(self):
         md = render_markdown(self._with_mode("installed"))
         assert "installed skill" in md
-        assert "source codebase" in md
+        assert "source checkout" in md
 
     def test_codebase_note_points_at_installed(self):
         md = render_markdown(self._with_mode("codebase"))
@@ -174,3 +174,37 @@ class TestZeroScoreRendering:
         md = render_markdown(result)
         row = [l for l in md.splitlines() if l.startswith("| 5 |")][0]
         assert "1.5" in row
+
+
+class TestPartialAssessmentRendering:
+    def _partial(self):
+        r = _make_grade_result()
+        r["partial_assessment"] = True
+        r["overall_score"] = None
+        r["letter_grade"] = None
+        r["unscoreable_dimensions"] = [11, 12]
+        r["scan"]["mode"] = "installed"
+        return r
+
+    def test_no_headline_grade_in_markdown(self):
+        md = render_markdown(self._partial())
+        assert "Partial assessment" in md
+        assert "/ 100" not in md.split("## Dimension")[0]
+
+    def test_names_what_could_not_be_assessed(self):
+        md = render_markdown(self._partial())
+        assert "Not assessable on this target" in md
+        assert "Script Correctness" in md and "Behavioral Evals" in md
+
+    def test_table_distinguishes_na_from_not_assessable(self):
+        r = self._partial()
+        r["na_dimensions"] = [5]
+        md = render_markdown(r)
+        rows = {l.split("|")[1].strip(): l for l in md.splitlines() if l.startswith("| ")}
+        assert "N/A" in rows["5"]
+        assert "not assessable" in rows["11"]
+
+    def test_html_does_not_crash_without_a_letter(self):
+        html = render_html(self._partial())
+        assert "grade-partial" in html
+        assert "Partial assessment" in html

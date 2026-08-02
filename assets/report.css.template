@@ -92,6 +92,16 @@ body {
   font-size: 0.875rem;
 }
 
+/* No letter to show: a dash, not an invented grade. */
+.grade-badge.grade-partial {
+  color: var(--text-muted);
+  border-color: var(--border);
+}
+
+.partial-note {
+  border-left-color: var(--severity-major);
+}
+
 .mode-note {
   background: var(--bg-card);
   border-left: 3px solid var(--accent);

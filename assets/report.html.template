@@ -16,12 +16,13 @@
       <div class="grade-badge grade-{{ grade_class }}">{{ letter_grade }}</div>
       <div class="score-info">
         <h1>{{ skill_name }}</h1>
-        <div class="score-number">{{ overall_score }} / 100</div>
+        <div class="score-number">{% if partial %}Partial assessment{% else %}{{ overall_score }} / 100{% endif %}</div>
         <div class="score-meta">Profile: {{ profile }}{% if baseline_status == "compared" %} &mdash; {{ delta_summary }}{% endif %}</div>
         {% if capped_by_blocker %}<div class="blocker-cap">&#9888; Grade capped by blocker finding</div>{% endif %}
       </div>
     </div>
 
+    {% if partial_note %}<div class="mode-note partial-note">{{ partial_note }}</div>{% endif %}
     {% if mode_note %}<div class="mode-note">{{ mode_note }}</div>{% endif %}
     {% if stale_note %}<div class="mode-note"><strong>Provenance:</strong> {{ stale_note }}</div>{% endif %}
 
@@ -43,7 +44,7 @@
           <td>{{ dim.number }}</td>
           <td>{{ dim.name }}</td>
           {% if dim.na %}
-          <td><em>N/A</em></td>
+          <td><em>{% if dim.unscoreable %}not assessable{% else %}N/A{% endif %}</em></td>
           <td>&mdash;</td>
           {% else %}
           <td>{{ dim.score }} / 4</td>

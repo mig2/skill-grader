@@ -77,12 +77,16 @@ Marking a dimension N/A excludes it and renormalises the total rather than scori
 
 An installed skill and its source repo are different objects and legitimately score differently. The installed copy carries neither tests nor evals; the repo carries those plus docs and plans. `scan.py` detects which it is looking at — via `.installed-from`, then `.git`, then location — and the report names it.
 
-| Target | D4 Resource Hygiene | D11 Script Correctness | D12 Behavioral Evals |
-|--------|---------------------|------------------------|----------------------|
-| Installed skill | Counts everything present | 0 — `tests/` is not payload | 0 — `evals/` is not payload |
-| Source codebase | Ignores repo furniture and gitignored output | Sees `tests/` | Sees `evals/` |
+| Target | Answers | D11 / D12 | Overall grade |
+|--------|---------|-----------|---------------|
+| Installed skill | Is what's deployed current, complete and safe? | not assessable | **none — partial assessment** |
+| Source codebase | Is this skill any good? | scored | letter grade |
 
-An install payload is what the skill reads or executes while running, and nothing consults `tests/` or `evals/` at runtime. So an installed target cannot speak to verification at all: both dimensions read 0 and the report points at the codebase. Resist the temptation to ship them just to lift the score — that bends the artifact to suit the measurement.
+An install payload is what the skill reads or executes while running, and nothing consults `tests/` or `evals/` at runtime. So an installed target cannot speak to verification at all.
+
+It gets **no overall grade** as a result. Excluding two dimensions renormalises over the remaining ten, which would make a target that merely carries less evidence score *higher* than a complete one — code-audit graded A- installed against C+ for its own repo before this was fixed. There is no denominator that makes 10-of-12 comparable to 12-of-12, so the installed report gives per-dimension scores, findings, and provenance, and stops there.
+
+Installed reports add a provenance line derived from `.installed-from`: whether the payload matches its source, how far it has drifted, and whether it was installed from a tree with uncommitted changes.
 
 Grade both for the full picture. A path symlinked into the skills directory resolves to its real location and reads as a codebase.
 
