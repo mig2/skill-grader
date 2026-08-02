@@ -79,16 +79,21 @@ def compute_score(
     profiles_path: Path,
     *,
     blockers: bool = False,
+    extra_na: list[int] | None = None,
 ) -> dict:
     """Compute overall score (0-100), letter grade, and metadata.
 
     Applies profile weights, excludes N/A dimensions, normalises to 0-100.
     If blockers=True, caps the letter grade at F regardless of numeric score.
+
+    extra_na marks dimensions unscoreable for this target rather than for this
+    archetype — used when the target cannot supply the evidence at all, which
+    is a different claim from the skill lacking it.
     """
     profiles = load_profiles(profiles_path)
     profile = profiles[profile_name]
     weights = profile["weights"]
-    na_dims = set(profile["na"])
+    na_dims = set(profile["na"]) | set(extra_na or [])
 
     # Build applicable dimension list
     applicable = {
@@ -136,6 +141,24 @@ def compute_delta(
     return {dim: current[dim] - baseline[dim] for dim in current if dim in baseline}
 
 
+# Verification surfaces an install payload cannot carry. Neither tests/ nor
+# evals/ is read at runtime, so no well-built skill ships them — scoring these
+# 0 on an installed target would penalise every skill identically, which is a
+# constant rather than a measurement.
+INSTALLED_UNSCOREABLE = [11, 12]
+
+
+def unscoreable_dimensions(scan_result: dict | None) -> list[int]:
+    """Dimensions the target cannot supply evidence for, whatever the skill.
+
+    Distinct from a profile's N/A list, which says a dimension does not apply
+    to this *archetype*. This says the evidence is not present in this *copy*.
+    """
+    if not scan_result or scan_result.get("mode") != "installed":
+        return []
+    return list(INSTALLED_UNSCOREABLE)
+
+
 def build_grade_result(
     dimension_scores: dict[int, int | float],
     findings: list[dict],
@@ -147,7 +170,9 @@ def build_grade_result(
     """Build the complete grade.json structure."""
     has_blockers = any(f.get("severity") == "blocker" for f in (findings or []))
     score_result = compute_score(
-        dimension_scores, profile_name, profiles_path, blockers=has_blockers
+        dimension_scores, profile_name, profiles_path,
+        blockers=has_blockers,
+        extra_na=unscoreable_dimensions(scan_result),
     )
 
     baseline_scores = baseline.get("dimension_scores") if baseline else None

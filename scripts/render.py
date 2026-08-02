@@ -16,9 +16,10 @@ SEVERITY_ORDER = ["blocker", "major", "minor", "nit"]
 # skill and its source repo are different objects and score differently.
 MODE_NOTES = {
     "installed": (
-        "Evaluating the installed skill. Neither tests nor evals belong in an "
-        "install payload, so D11 and D12 describe the deployed surface only — "
-        "grade the source codebase to say anything about verification."
+        "Evaluating the installed skill — the copy that actually runs. Neither "
+        "tests nor evals belong in an install payload, so D11 and D12 are "
+        "marked N/A rather than scored 0: grade the source codebase to say "
+        "anything about verification."
     ),
     "codebase": (
         "Evaluating the skill codebase. Repo furniture (docs/, README) is "
@@ -33,6 +34,41 @@ def _get_flex(d: dict, key: int):
     if key in d:
         return d[key]
     return d.get(str(key))
+
+
+def describe_staleness(scan: dict) -> str | None:
+    """One line on how the installed payload compares to its source.
+
+    Only meaningful for an installed target, and the question the source
+    checkout cannot answer: is the deployed copy the one you think it is?
+    """
+    # A checkout has no install stamp by definition; saying so is noise.
+    if scan.get("mode") != "installed":
+        return None
+
+    st = scan.get("staleness") or {}
+    if st.get("dirty_at_install"):
+        return (
+            "Installed from a tree with uncommitted changes — the recorded "
+            "commit does not fully describe this payload."
+        )
+    if not st.get("checked"):
+        reason = st.get("reason")
+        return f"Provenance unverifiable: {reason}." if reason else None
+
+    behind = st.get("commits_behind") or 0
+    if behind == 0:
+        return "Payload matches the source at HEAD."
+    plural = "commit" if behind == 1 else "commits"
+    if st.get("payload_changed"):
+        return (
+            f"Stale: source is {behind} {plural} ahead and the payload has "
+            f"changed. Re-run install.sh."
+        )
+    return (
+        f"Source is {behind} {plural} ahead, but nothing in the payload "
+        f"changed — the deployed skill is current."
+    )
 
 
 def _format_delta(value: int | float | None) -> str:
@@ -69,6 +105,11 @@ def render_markdown(grade_result: dict) -> str:
 
     if mode_note:
         lines.append(f"> {mode_note}")
+        lines.append("")
+
+    stale_note = describe_staleness(scan)
+    if stale_note:
+        lines.append(f"**Provenance:** {stale_note}")
         lines.append("")
 
     if capped:
@@ -269,6 +310,7 @@ def render_html(grade_result: dict) -> str:
         skill_name=skill_name,
         css=css,
         mode_note=mode_note,
+        stale_note=describe_staleness(scan),
         letter_grade=letter,
         grade_class=grade_class,
         overall_score=overall,

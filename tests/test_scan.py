@@ -178,6 +178,102 @@ class TestModeDetection:
         assert scan_skill(skill)["mode"] == "codebase"
 
 
+class TestInstallProvenance:
+    def _repo(self, tmp_path):
+        """A source checkout with one commit, usable as an install source."""
+        src = _make_skill(tmp_path / "src")
+        subprocess.run(["git", "init", "-q"], cwd=src, check=True)
+        subprocess.run(["git", "add", "-A"], cwd=src, check=True)
+        subprocess.run(
+            ["git", "-c", "user.email=t@t", "-c", "user.name=t",
+             "commit", "-qm", "init"], cwd=src, check=True,
+        )
+        head = subprocess.run(
+            ["git", "rev-parse", "HEAD"], cwd=src,
+            capture_output=True, text=True, check=True,
+        ).stdout.strip()
+        return src, head
+
+    def _install(self, tmp_path, stamp_text):
+        skill = _make_skill(tmp_path / "installed")
+        (skill / ".installed-from").write_text(stamp_text)
+        return skill
+
+    def test_legacy_bare_hash_still_detects_installed(self, tmp_path):
+        """code-audit's original format must keep working."""
+        skill = self._install(tmp_path, "b902f52\n")
+        result = scan_skill(skill)
+        assert result["mode"] == "installed"
+        assert result["install_metadata"]["legacy"] is True
+        assert result["install_metadata"]["commit"] == "b902f52"
+
+    def test_legacy_stamp_cannot_be_checked_for_drift(self, tmp_path):
+        """A bare hash names no repo, so drift is unverifiable, not zero."""
+        skill = self._install(tmp_path, "b902f52\n")
+        st = scan_skill(skill)["staleness"]
+        assert st["checked"] is False
+        assert st["commits_behind"] is None
+        assert "source" in st["reason"]
+
+    def test_current_install_reports_no_drift(self, tmp_path):
+        src, head = self._repo(tmp_path)
+        skill = self._install(tmp_path, json.dumps({
+            "source_path": str(src), "commit": head, "dirty": False,
+        }))
+        st = scan_skill(skill)["staleness"]
+        assert st["checked"] is True
+        assert st["commits_behind"] == 0
+        assert st["payload_changed"] is False
+
+    def test_drift_outside_the_payload_is_not_staleness(self, tmp_path):
+        """A docs-only commit leaves the deployed skill current."""
+        src, head = self._repo(tmp_path)
+        (src / "docs").mkdir()
+        (src / "docs" / "notes.md").write_text("# notes\n")
+        subprocess.run(["git", "add", "-A"], cwd=src, check=True)
+        subprocess.run(
+            ["git", "-c", "user.email=t@t", "-c", "user.name=t",
+             "commit", "-qm", "docs"], cwd=src, check=True,
+        )
+        skill = self._install(tmp_path, json.dumps({
+            "source_path": str(src), "commit": head, "dirty": False,
+        }))
+        st = scan_skill(skill)["staleness"]
+        assert st["commits_behind"] == 1
+        assert st["payload_changed"] is False
+
+    def test_payload_drift_is_staleness(self, tmp_path):
+        src, head = self._repo(tmp_path)
+        (src / "SKILL.md").write_text("# Skill\n\nSee references/guide.md\n\nnew\n")
+        subprocess.run(["git", "add", "-A"], cwd=src, check=True)
+        subprocess.run(
+            ["git", "-c", "user.email=t@t", "-c", "user.name=t",
+             "commit", "-qm", "edit skill"], cwd=src, check=True,
+        )
+        skill = self._install(tmp_path, json.dumps({
+            "source_path": str(src), "commit": head, "dirty": False,
+        }))
+        st = scan_skill(skill)["staleness"]
+        assert st["commits_behind"] == 1
+        assert st["payload_changed"] is True
+
+    def test_missing_source_is_unverifiable_not_current(self, tmp_path):
+        skill = self._install(tmp_path, json.dumps({
+            "source_path": str(tmp_path / "gone"), "commit": "abc123",
+            "dirty": False,
+        }))
+        st = scan_skill(skill)["staleness"]
+        assert st["checked"] is False
+        assert "not found" in st["reason"]
+
+    def test_dirty_install_is_flagged(self, tmp_path):
+        src, head = self._repo(tmp_path)
+        skill = self._install(tmp_path, json.dumps({
+            "source_path": str(src), "commit": head, "dirty": True,
+        }))
+        assert scan_skill(skill)["staleness"]["dirty_at_install"] is True
+
+
 class TestFurnitureExclusion:
     FURNITURE = ("docs/plan.md", "README.md", "LICENSE.md", "install.sh")
 

@@ -47,6 +47,10 @@ NEVER_ORPHAN_NAMES = {"__init__.py"}
 
 SKILLS_DIR = Path.home() / ".claude" / "skills"
 
+# Paths that make up an install payload. Drift outside these is real history
+# but changes nothing about the deployed skill, so it is not staleness.
+PAYLOAD_PATHS = ["SKILL.md", "scripts", "references", "assets", "config"]
+
 # Development artifacts that belong in a source repo but are not skill
 # resources. Excluded from orphan detection in codebase mode only — in
 # installed mode their presence is genuinely unexpected.
@@ -90,7 +94,7 @@ def _detect_mode(skill_path: Path) -> str:
     version control, then location. A repo symlinked into the skills directory
     resolves to its real path and correctly reads as a codebase.
     """
-    if (skill_path / ".installed-from").exists():
+    if (skill_path / ".installed-from").is_file():
         return "installed"
     if (skill_path / ".git").exists():
         return "codebase"
@@ -99,6 +103,83 @@ def _detect_mode(skill_path: Path) -> str:
         return "installed"
     except ValueError:
         return "codebase"
+
+
+def _read_install_stamp(skill_path: Path) -> dict | None:
+    """Parse .installed-from, tolerating the legacy bare-hash format.
+
+    code-audit's original convention wrote only a short hash. That identifies
+    a commit but not the repo it belongs to, so drift cannot be checked from
+    it — such stamps are returned with legacy set, and the caller reports the
+    provenance as unverifiable rather than guessing.
+    """
+    stamp = skill_path / ".installed-from"
+    if not stamp.is_file():
+        return None
+    raw = stamp.read_text(encoding="utf-8", errors="replace").strip()
+    if not raw:
+        return None
+    try:
+        data = json.loads(raw)
+    except ValueError:
+        return {"commit": raw, "legacy": True}
+    if not isinstance(data, dict):
+        return {"commit": raw, "legacy": True}
+    data.setdefault("legacy", False)
+    return data
+
+
+def _check_staleness(stamp: dict | None) -> dict:
+    """Compare an installed payload against the source it was built from.
+
+    Returns `checked: False` whenever the source cannot be located — an
+    unverifiable install is a different finding from a stale one, and
+    collapsing the two would report drift of zero for a source that is simply
+    missing.
+    """
+    result = {
+        "checked": False,
+        "reason": None,
+        "commits_behind": None,
+        "payload_changed": None,
+        "dirty_at_install": bool(stamp.get("dirty")) if stamp else None,
+    }
+    if not stamp:
+        result["reason"] = "no install stamp"
+        return result
+    if stamp.get("legacy"):
+        result["reason"] = "legacy bare-hash stamp records no source location"
+        return result
+
+    source = stamp.get("source_path")
+    commit = stamp.get("commit")
+    if not source or not commit or commit == "unknown":
+        result["reason"] = "stamp lacks a source path or commit"
+        return result
+    if not (Path(source) / ".git").exists():
+        result["reason"] = f"source repo not found at {source}"
+        return result
+
+    def _git(*args) -> str | None:
+        try:
+            proc = subprocess.run(
+                ["git", "-C", source, *args],
+                capture_output=True, text=True, timeout=10,
+            )
+        except (OSError, subprocess.SubprocessError):
+            return None
+        return proc.stdout.strip() if proc.returncode == 0 else None
+
+    behind = _git("rev-list", "--count", f"{commit}..HEAD")
+    if behind is None:
+        result["reason"] = "recorded commit is not present in the source repo"
+        return result
+
+    changed = _git("diff", "--name-only", f"{commit}..HEAD", "--", *PAYLOAD_PATHS)
+    result["checked"] = True
+    result["commits_behind"] = int(behind)
+    result["payload_changed"] = bool(changed)
+    return result
 
 
 def _is_furniture(rel_path: str) -> bool:
@@ -475,6 +556,8 @@ def scan_skill(skill_path: Path) -> dict:
     # Has evals
     has_unit_tests = _has_unit_tests(skill_path)
     evals = _scan_evals(skill_path)
+    install_stamp = _read_install_stamp(skill_path)
+    staleness = _check_staleness(install_stamp)
 
     # Duplicated blocks
     duplicated_blocks = _find_duplicated_blocks(skill_path, skill_text, bundled)
@@ -485,6 +568,8 @@ def scan_skill(skill_path: Path) -> dict:
     return {
         "skill_path": str(skill_path),
         "mode": mode,
+        "install_metadata": install_stamp,
+        "staleness": staleness,
         "skill_md_lines": skill_md_lines,
         "orphaned_files": orphaned,
         "dangling_refs": dangling,

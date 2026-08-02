@@ -23,6 +23,7 @@
     </div>
 
     {% if mode_note %}<div class="mode-note">{{ mode_note }}</div>{% endif %}
+    {% if stale_note %}<div class="mode-note"><strong>Provenance:</strong> {{ stale_note }}</div>{% endif %}
 
     <!-- Dimension Scores -->
     <h2>Dimension Scores</h2>

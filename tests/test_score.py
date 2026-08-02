@@ -2,6 +2,7 @@
 
 from pathlib import Path
 from scripts.score import (
+    unscoreable_dimensions,
     load_profiles,
     compute_score,
     to_letter_grade,
@@ -97,3 +98,38 @@ class TestComputeDelta:
         scores = {i: 3 for i in range(1, 13)}
         delta = compute_delta(scores, scores)
         assert all(v == 0 for v in delta.values())
+
+
+class TestUnscoreableDimensions:
+    """An installed payload carries neither tests nor evals, whatever the
+    skill's quality — so D11 and D12 are N/A there, not zero."""
+
+    def test_installed_marks_verification_dimensions_na(self):
+        assert unscoreable_dimensions({"mode": "installed"}) == [11, 12]
+
+    def test_codebase_marks_nothing_extra(self):
+        assert unscoreable_dimensions({"mode": "codebase"}) == []
+
+    def test_missing_scan_is_safe(self):
+        assert unscoreable_dimensions(None) == []
+
+    def test_installed_grade_renormalises_over_ten_dimensions(self):
+        scores = {i: 4 for i in range(1, 13)}
+        scores[11] = 0
+        scores[12] = 0
+        result = compute_score(
+            scores, "balanced", PROFILES_PATH, extra_na=[11, 12],
+        )
+        # Perfect on every dimension the target can speak to.
+        assert result["overall_score"] == 100.0
+        assert 11 in result["na_dimensions"] and 12 in result["na_dimensions"]
+
+    def test_build_grade_result_applies_mode(self):
+        scores = {i: 4 for i in range(1, 13)}
+        scores[11] = 0
+        scores[12] = 0
+        gr = build_grade_result(
+            scores, [], {"mode": "installed"}, "balanced", PROFILES_PATH,
+        )
+        assert gr["overall_score"] == 100.0
+        assert sorted(gr["na_dimensions"]) == [11, 12]

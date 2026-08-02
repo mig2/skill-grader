@@ -1,6 +1,6 @@
 """Tests for render.py — report generation."""
 
-from scripts.render import render_markdown, render_html
+from scripts.render import render_markdown, render_html, describe_staleness
 from scripts.score import DIMENSION_NAMES
 
 
@@ -120,3 +120,36 @@ class TestRenderHtml:
         html = render_html(_make_grade_result())
         assert 'href="http' not in html
         assert 'src="http' not in html
+
+
+class TestStalenessNote:
+    def _scan(self, **st):
+        return {"scan": {"skill_path": "/s", "mode": "installed", "staleness": st}}
+
+    def test_codebase_target_gets_no_provenance_line(self):
+        scan = {"skill_path": "/s", "mode": "codebase", "staleness": {"checked": False}}
+        assert describe_staleness(scan) is None
+
+    def test_current_payload_reads_as_current(self):
+        note = describe_staleness(self._scan(checked=True, commits_behind=0)["scan"])
+        assert "matches the source" in note
+
+    def test_non_payload_drift_is_not_reported_as_stale(self):
+        note = describe_staleness(
+            self._scan(checked=True, commits_behind=2, payload_changed=False)["scan"]
+        )
+        assert "current" in note
+        assert "Stale" not in note
+
+    def test_payload_drift_says_reinstall(self):
+        note = describe_staleness(
+            self._scan(checked=True, commits_behind=1, payload_changed=True)["scan"]
+        )
+        assert "Stale" in note
+        assert "install.sh" in note
+
+    def test_dirty_install_outranks_drift(self):
+        note = describe_staleness(
+            self._scan(checked=True, commits_behind=0, dirty_at_install=True)["scan"]
+        )
+        assert "uncommitted" in note
