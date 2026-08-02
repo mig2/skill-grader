@@ -1,7 +1,7 @@
 ---
 name: skill-grader
 description: >
-  Grade the quality of a Claude Skill against an 11-dimension rubric.
+  Grade the quality of a Claude Skill against a 12-dimension rubric.
   Use when asked to grade, review, evaluate, audit, or score a skill.
   Use when asked "is this skill any good?" or "what's wrong with this skill?"
   Use when asked to check skill quality, assess a skill, or run skill-grader.
@@ -11,7 +11,7 @@ description: >
 
 ## Purpose
 
-skill-grader evaluates a Claude Skill against an 11-dimension rubric and produces a structured grade report. For repo layout, install instructions, and background, see `README.md`. It measures description quality, trigger coverage, structural hygiene, scripting discipline, voice, output contracts, examples, portability, safety, and testability. It does not rewrite, fix, or author skills — it diagnoses them. Use the findings as input to a revision pass, not as a rewrite directive.
+skill-grader evaluates a Claude Skill against a 12-dimension rubric and produces a structured grade report. For repo layout, install instructions, and background, see `README.md`. It measures description quality, trigger coverage, structural hygiene, scripting discipline, voice, output contracts, examples, portability, safety, script correctness, and behavioral evals. It does not rewrite, fix, or author skills — it diagnoses them. Use the findings as input to a revision pass, not as a rewrite directive.
 
 ---
 
@@ -45,7 +45,7 @@ skill-grader --self                       # grade this skill under the workflow 
 uv run python scripts/scan.py <skill-path>
 ```
 
-Read the scan result JSON. It provides measurements for dimensions 3 (progressive disclosure), 4 (resource hygiene), 5 (script vs. prose), 6 (instructional voice), and 11 (testability). Treat these as floors — mechanical checks can only confirm presence, not quality.
+Read the scan result JSON. It provides measurements for dimensions 3 (progressive disclosure), 4 (resource hygiene), 5 (script vs. prose), 6 (instructional voice), 11 (script correctness), and 12 (behavioral evals). Treat these as floors — mechanical checks can only confirm presence, not quality.
 
 ### Step 2: Detect or accept profile
 
@@ -57,14 +57,14 @@ Use the detected profile unless `--profile` was specified. The profile controls 
 
 ### Step 3: Read references
 
-- Read `references/rubric.md` — anchored 0–4 descriptors for all 11 dimensions.
+- Read `references/rubric.md` — anchored 0–4 descriptors for all 12 dimensions.
 - Read `references/static-checks.md` — which dimensions are mechanical vs. judgment, and what each check covers.
 
 Do not proceed to scoring without reading these. The anchors are the ground truth; do not substitute your own heuristics.
 
 ### Step 4: Score each dimension
 
-For each of the 11 dimensions:
+For each of the 12 dimensions:
 
 - **Mechanically checked dimensions:** Use the scan result as the floor. Adjust upward only if judgment finds additional quality beyond what the scan can measure.
 - **Judgment-required dimensions:** Read the skill, compare against the rubric descriptors, and assign a score of 0–4.
@@ -118,7 +118,8 @@ Full anchored descriptors are in `references/rubric.md`. This table is a navigat
 | 8 | Examples | Present, generalising, not overfit to a single case? |
 | 9 | Environment Portability | Assumptions declared? Degradation paths for missing tools? |
 | 10 | Least Surprise / Safety | Intent match? No undisclosed side-effects? Gating for destructive ops? |
-| 11 | Testability | Evals present? Assertions appropriate to the skill's output type? |
+| 11 | Script Correctness | Bundled scripts covered by unit tests? **N/A when no `scripts/`** |
+| 12 | Behavioral Evals | Trigger and quality evals present? Assertions appropriate to the output type? Never N/A |
 
 ---
 
@@ -131,3 +132,14 @@ Full anchored descriptors are in `references/rubric.md`. This table is a navigat
 | `grade.json` | Always | Machine-readable result for CI gating and baselines |
 | `issues.json` | `--emit-issues` only | Structured issue list for import. See `references/issue-import.md` |
 | `issues.csv` | `--emit-issues` only | Spreadsheet-compatible issue list |
+
+---
+
+## Evals
+
+This skill is graded by its own D12, so it ships evals:
+
+- `evals/trigger_eval.json` — queries that should and should not invoke skill-grader. The negative cases cover the sibling collision with `code-audit` and requests to *fix* rather than *diagnose*.
+- `evals/evals.json` — task prompts with assertions, graded against the fixtures in `tests/fixtures/` so expected outcomes are known.
+
+Assertions here are objective because the output is objective: a grade, a set of dimension scores, and findings. Do not add assertions of this kind when grading a skill whose output is prose or design — judge those qualitatively instead.

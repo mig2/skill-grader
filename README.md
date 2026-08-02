@@ -1,6 +1,6 @@
 # skill-grader
 
-A skill-grading skill for Claude Code. Evaluates a Claude Skill against an 11-dimension rubric and emits an actionable, severity-tagged report.
+A skill-grading skill for Claude Code. Evaluates a Claude Skill against a 12-dimension rubric and emits an actionable, severity-tagged report.
 
 skill-grader answers *"is this skill any good, and what specifically is wrong with it?"* It is a judgment-and-reporting layer: it produces findings, it does not author or rewrite skills.
 
@@ -39,7 +39,7 @@ Everything mechanically checkable lives in `scan.py`, not in prose. The model's 
 
 ## Rubric
 
-Eleven dimensions, each scored 0–4 against anchored descriptors in `references/rubric.md`.
+Twelve dimensions, each scored 0–4 against anchored descriptors in `references/rubric.md`.
 
 | # | Dimension | Checks |
 |---|-----------|--------|
@@ -53,9 +53,12 @@ Eleven dimensions, each scored 0–4 against anchored descriptors in `references
 | 8 | Examples | Present, generalising, not overfit? |
 | 9 | Environment Portability | Assumptions declared? Degradation paths? |
 | 10 | Least Surprise / Safety | Intent match? No surprise effects? **Gating.** |
-| 11 | Testability | Evals present? Assertions appropriate? |
+| 11 | Script Correctness | Bundled scripts unit-tested? **N/A when no `scripts/`** |
+| 12 | Behavioral Evals | Trigger and quality evals present? Assertions appropriate? |
 
 Dimension 10 is gating: any blocker finding caps the overall grade regardless of weighted score.
+
+D11 and D12 are deliberately separate. Unit tests catch a script that computes the wrong answer; evals catch a description that never fires or instructions that produce worse output than no skill at all. A skill can pass one completely while failing the other, so coverage of one never satisfies the other.
 
 ## Weight profiles
 
@@ -63,21 +66,23 @@ A flat weighting produces unfair grades across skill archetypes. Profiles live i
 
 | Profile | Fits | Weighted up | N/A |
 |---------|------|-------------|-----|
-| `workflow` | Multi-step pipelines with scripts and artifacts | 4, 5, 7, 11 | — |
-| `style` | House-style and formatting rules | 6, 7, 8 | 11 |
-| `reference` | Domain knowledge, minimal procedure | 2, 3, 4 | 5, 11 |
+| `workflow` | Multi-step pipelines with scripts and artifacts | 4, 5, 7, 11, 12 | — |
+| `style` | House-style and formatting rules | 6, 7, 8, 12 | 11 |
+| `reference` | Domain knowledge, minimal procedure | 2, 3, 4, 12 | 5, 11 |
 | `balanced` | Fallback when archetype is unclear | flat | — |
 
 Marking a dimension N/A excludes it and renormalises the total rather than scoring it zero. The report always names the profile used and lists N/A dimensions — a grade is uninterpretable without knowing how it was weighted.
 
 ## Grading target: installed skill vs. codebase
 
-An installed skill and its source repo are different objects and legitimately score differently. The installed copy ships without tests; the repo carries docs and plans. `scan.py` detects which it is looking at — via `.installed-from`, then `.git`, then location — and the report names it.
+An installed skill and its source repo are different objects and legitimately score differently. The installed copy ships without unit tests; the repo carries docs and plans. `scan.py` detects which it is looking at — via `.installed-from`, then `.git`, then location — and the report names it.
 
-| Target | D4 Resource Hygiene | D11 Testability |
-|--------|---------------------|-----------------|
-| Installed skill | Counts everything present | Reflects what ships (often 0) |
-| Source codebase | Ignores repo furniture and gitignored output | Sees `tests/` |
+| Target | D4 Resource Hygiene | D11 Script Correctness | D12 Behavioral Evals |
+|--------|---------------------|------------------------|----------------------|
+| Installed skill | Counts everything present | Reflects what ships (often 0) | Unaffected — `evals/` ships |
+| Source codebase | Ignores repo furniture and gitignored output | Sees `tests/` | Unaffected |
+
+`evals/` is small JSON that defines correctness for the deployed thing, so `install.sh` ships it. `tests/` is not shipped, which is why D11 is the dimension that moves between targets.
 
 Grade both for the full picture. A path symlinked into the skills directory resolves to its real location and reads as a codebase.
 
@@ -117,6 +122,9 @@ skill-grader/
 ├── scripts/                 # scan, detect_profile, score, render, emit_issues
 ├── assets/                  # report CSS and HTML templates
 ├── config/profiles.yaml     # weight profiles
+├── evals/
+│   ├── trigger_eval.json    # queries that should and should not trigger
+│   └── evals.json           # task prompts with assertions
 ├── tests/fixtures/          # deliberately flawed skills, one per dimension
 └── docs/spec.md             # design spec
 ```

@@ -20,7 +20,8 @@ DIMENSION_SLUGS: dict[int, str] = {
     8: "examples",
     9: "environment-portability",
     10: "least-surprise-safety",
-    11: "testability",
+    11: "script-correctness",
+    12: "behavioral-evals",
 }
 
 _SEVERITY_RANK = {"blocker": 2, "major": 1, "nit": 0}

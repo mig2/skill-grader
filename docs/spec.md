@@ -45,7 +45,7 @@ If Mode B is requested in an environment that cannot support it, degrade to Mode
 
 ## 3. Rubric
 
-Eleven dimensions. Each scored **0–4** against anchored descriptors, with configurable weights.
+Twelve dimensions. Each scored **0–4** against anchored descriptors, with configurable weights.
 
 | # | Dimension | What it checks |
 |---|---|---|
@@ -59,7 +59,10 @@ Eleven dimensions. Each scored **0–4** against anchored descriptors, with conf
 | 8 | **Examples** | Presence, and whether they generalise. Examples narrow enough to be overfit are worse than none — they anchor the model to a single case. |
 | 9 | **Environment portability** | Undeclared assumptions about subagents, browser, display, or CLI availability. Does it degrade gracefully, and does it *say* how? |
 | 10 | **Least surprise / safety** | Contents match stated intent. No unexpected network egress, filesystem writes outside declared paths, or instruction-injection surface in bundled files. Any finding here is an automatic blocker regardless of score. |
-| 11 | **Testability** | Does the skill ship evals? Are assertions objective where the output is objective — and correctly *absent* where the output is subjective? |
+| 11 | **Script correctness** | Are the bundled scripts covered by unit tests? This is about the deterministic code, not the skill's behaviour — a skill whose scanner miscounts is broken however well it triggers. **N/A when the skill ships no `scripts/`.** |
+| 12 | **Behavioral evals** | Does the skill ship evals that test *the skill itself*? Trigger evals proving the description fires on the right requests and stays quiet on the wrong ones; quality evals proving the output beats no-skill baseline. Are assertions objective where the output is objective — and correctly *absent* where the output is subjective? **Never N/A.** |
+
+Dimensions 11 and 12 are separate because they are different verification surfaces, checked by different machinery, with different applicability. Unit tests catch a script that computes the wrong answer; evals catch a description that never fires. Letting pytest coverage stand in for behavioural evidence is the failure this split exists to prevent.
 
 ### Scoring
 
@@ -68,16 +71,16 @@ Eleven dimensions. Each scored **0–4** against anchored descriptors, with conf
 
 ### Weight profiles
 
-The eleven dimensions do not matter equally across skill archetypes, and a flat weighting produces unfair grades. A profile is a named weight vector plus a set of dimensions marked **N/A**.
+The twelve dimensions do not matter equally across skill archetypes, and a flat weighting produces unfair grades. A profile is a named weight vector plus a set of dimensions marked **N/A**.
 
 | Profile | Fits | Weighted up | N/A |
 |---|---|---|---|
-| `workflow` | Multi-step pipelines with scripts and artifacts | 4, 5, 7, 11 | — |
-| `style` | House-style and formatting rules | 6, 7, 8 | 11 (output is judged, not asserted) |
-| `reference` | Domain knowledge, minimal procedure | 2, 3, 4 | 5, 11 |
+| `workflow` | Multi-step pipelines with scripts and artifacts | 4, 5, 7, 11, 12 | — |
+| `style` | House-style and formatting rules | 6, 7, 8, 12 | 11 (no scripts to unit test) |
+| `reference` | Domain knowledge, minimal procedure | 2, 3, 4, 12 | 5, 11 |
 | `balanced` | Fallback when archetype is unclear | flat | — |
 
-Marking a dimension N/A **excludes it and renormalises the total**. It is not scored zero. A style skill correctly has no objective assertions; penalising it for their absence would reward a design error.
+Marking a dimension N/A **excludes it and renormalises the total**. It is not scored zero. A style skill ships no scripts, so there is nothing to unit test; penalising it for their absence would reward a design error. Behavioral evals (12) are never N/A — every skill has a description that must trigger and output someone must be able to judge.
 
 Profiles live in `config/profiles.yaml`. The grader auto-detects an archetype from structure — presence of `scripts/`, ratio of procedural to declarative content, whether outputs are artifacts or transformed text — and states its guess. `--profile <name>` overrides. **The report always names the profile used and lists N/A dimensions**, because a grade is uninterpretable without knowing how it was weighted.
 

@@ -66,14 +66,57 @@ class TestResourceGraph:
         assert result["has_scripts"] is False
 
 
-class TestHasEvals:
-    def test_gold_has_evals(self):
+class TestVerificationSurfaces:
+    """Unit tests and evals are separate signals and must not substitute.
+
+    D11 asks whether the bundled scripts are tested; D12 asks whether the skill
+    itself was ever evaluated. A skill can satisfy one and fail the other.
+    """
+
+    def test_gold_has_both_surfaces(self):
         result = scan_skill(FIXTURES / "gold")
+        assert result["has_unit_tests"] is True
+        assert result["has_trigger_evals"] is True
+        assert result["has_quality_evals"] is True
+        assert result["has_eval_assertions"] is True
+
+    def test_dim11_has_evals_but_no_unit_tests(self):
+        """Isolates D11: scripts ship untested, evals are present."""
+        result = scan_skill(FIXTURES / "dim11-no-tests")
+        assert result["has_scripts"] is True
+        assert result["has_unit_tests"] is False
         assert result["has_evals"] is True
 
-    def test_dim11_no_evals(self):
-        result = scan_skill(FIXTURES / "dim11-no-tests")
+    def test_dim12_has_unit_tests_but_no_evals(self):
+        """Isolates D12: scripts are tested, the skill never was."""
+        result = scan_skill(FIXTURES / "dim12-no-evals")
+        assert result["has_unit_tests"] is True
         assert result["has_evals"] is False
+        assert result["has_trigger_evals"] is False
+        assert result["has_quality_evals"] is False
+
+    def test_unit_tests_require_recognisable_test_files(self, tmp_path):
+        """A tests/ directory of fixtures verifies nothing."""
+        skill = _make_skill(tmp_path / "s", extra=("tests/fixtures/sample.md",))
+        assert scan_skill(skill)["has_unit_tests"] is False
+
+    def test_empty_assertions_do_not_count(self, tmp_path):
+        """skill-creator writes assertions:[] as a placeholder before drafting."""
+        skill = _make_skill(tmp_path / "s")
+        (skill / "evals").mkdir()
+        (skill / "evals" / "evals.json").write_text(
+            '{"evals": [{"id": 1, "prompt": "do a thing", "assertions": []}]}'
+        )
+        result = scan_skill(skill)
+        assert result["has_quality_evals"] is True
+        assert result["has_eval_assertions"] is False
+
+    def test_eval_files_are_listed(self):
+        result = scan_skill(FIXTURES / "gold")
+        assert sorted(result["eval_files"]) == [
+            "evals/evals.json",
+            "evals/trigger_eval.json",
+        ]
 
 
 class TestContentDuplication:
@@ -92,7 +135,8 @@ class TestScanOutput:
         expected_keys = {
             "skill_path", "skill_md_lines", "orphaned_files",
             "dangling_refs", "caps_density", "caps_lines",
-            "large_refs_without_toc", "has_scripts", "has_evals",
+            "large_refs_without_toc", "has_scripts", "has_evals", "has_unit_tests",
+            "has_trigger_evals", "has_quality_evals", "has_eval_assertions",
             "duplicated_blocks", "bundled_files", "referenced_files",
             "deterministic_prose_signals", "mode",
         }

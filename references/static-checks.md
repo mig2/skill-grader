@@ -12,7 +12,8 @@ These dimensions have quantitative measurements from scan.py. Use the scan resul
 | D4: Resource Hygiene | `orphaned_files`, `dangling_refs`, `duplicated_blocks` | Orphaned files, dangling references, content duplication |
 | D5: Script vs. Prose | `deterministic_prose_signals`, `has_scripts` | Prose describing deterministic work; presence of scripts/ |
 | D6: Instructional Voice | `caps_density`, `caps_lines` | ALL-CAPS imperative density (>5% is a smell) |
-| D11: Testability | `has_evals` | Presence of tests/evals directory with files |
+| D11: Script Correctness | `has_unit_tests`, `has_scripts` | Recognisable test files in `tests/` or `test/`. **N/A when `has_scripts` is false** |
+| D12: Behavioral Evals | `has_trigger_evals`, `has_quality_evals`, `has_eval_assertions`, `eval_files` | Eval files under `evals/`, classified by type, and whether assertions are non-empty |
 
 ## Judgment-Required (model evaluation)
 
@@ -35,6 +36,12 @@ Some dimensions get a measurement floor from scan.py and a judgment ceiling from
 - **D4**: scan.py finds orphans/dangling/duplication → structural floor. Model evaluates whether duplication is meaningful.
 - **D5**: scan.py flags deterministic prose patterns → if many, floor is score 0-2. Model evaluates whether the flagged prose genuinely should be a script.
 - **D6**: scan.py gives caps density → if >5%, floor is score 0-2. Model evaluates rationale quality and voice consistency.
+- **D11**: scan.py reports whether test files exist → if absent while `has_scripts` is true, the score is 0. Presence only proves tests exist; the model judges whether they cover the scripts' real logic or only happy paths.
+- **D12**: scan.py reports which eval types are present and whether assertions are non-empty → sets the floor. The model judges whether the trigger queries cover realistic phrasings, whether negative cases are genuinely tempting, and whether assertions are objective where the output is objective and correctly absent where it is subjective.
+
+### Distinguishing D11 from D12
+
+Both ask "can you tell if this works?", but about different things. Unit tests catch a script that computes the wrong answer. Evals catch a description that never fires, or instructions that produce worse output than no skill at all. A skill can pass one completely while failing the other, so never let coverage of one satisfy the other.
 
 ## Using Scan Results in Scoring
 

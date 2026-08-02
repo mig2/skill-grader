@@ -27,6 +27,11 @@ cp -R "$SCRIPT_DIR/references" "$SKILL_DIR/"
 cp -R "$SCRIPT_DIR/assets" "$SKILL_DIR/"
 cp -R "$SCRIPT_DIR/config" "$SKILL_DIR/"
 
+# evals/ ships but tests/ does not: evals define correctness for the deployed
+# skill, whereas unit tests cover the source. This is why D11 moves between an
+# installed target and a checkout while D12 does not.
+cp -R "$SCRIPT_DIR/evals" "$SKILL_DIR/"
+
 # score.py resolves weights from config/profiles.yaml at runtime, and the
 # scripts run under `uv run`, so the project manifest ships as well.
 cp "$SCRIPT_DIR/pyproject.toml" "$SKILL_DIR/"

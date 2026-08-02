@@ -97,7 +97,10 @@ Requires Python 3.9+ for `scripts/classify.py`. If Python is unavailable, classi
 | File | Purpose |
 |------|---------|
 | `scripts/classify.py` | Classify the commit type from a diff |
+| `evals/trigger_eval.json` | Trigger eval — queries that should and should not invoke this skill |
+| `evals/evals.json` | Quality evals — prompts with assertions on the message produced |
 
 ## References
 
 See `scripts/classify.py --help` for usage.
+See `evals/trigger_eval.json` and `evals/evals.json` for the behavioural evals.

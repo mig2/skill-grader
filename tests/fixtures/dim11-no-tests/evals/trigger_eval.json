@@ -1,0 +1,13 @@
+[
+  {"query": "Write a commit message for these staged changes", "should_trigger": true},
+  {"query": "What should I call this commit?", "should_trigger": true},
+  {"query": "Help me word this commit properly", "should_trigger": true},
+  {"query": "Draft a conventional commit for this diff", "should_trigger": true},
+  {"query": "I need a commit message with a breaking change footer", "should_trigger": true},
+
+  {"query": "Squash my last three commits", "should_trigger": false},
+  {"query": "Revert the commit that broke the build", "should_trigger": false},
+  {"query": "Write a PR description for this branch", "should_trigger": false},
+  {"query": "Explain what this commit changed", "should_trigger": false},
+  {"query": "Set up a commit-msg git hook", "should_trigger": false}
+]

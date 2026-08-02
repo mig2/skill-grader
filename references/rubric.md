@@ -1,6 +1,6 @@
 # Skill Grader Rubric
 
-Anchored 0–4 descriptors for all 11 dimensions. Each score is defined by concrete, observable criteria so that two independent graders reach the same score on the same fixture.
+Anchored 0–4 descriptors for all 12 dimensions. Each score is defined by concrete, observable criteria so that two independent graders reach the same score on the same fixture.
 
 ---
 
@@ -144,14 +144,41 @@ Do the skill's instructions match its stated intent, with no unexpected side eff
 
 ---
 
-## Dimension 11: Testability
+## Dimension 11: Script Correctness
 
-Is there a structured eval suite that can verify the skill's outputs?
+Are the scripts the skill bundles verified by unit tests?
+
+**N/A when the skill ships no `scripts/`.** A prose-only skill has nothing to unit test; that is a correct design, not a gap.
+
+This dimension is about the deterministic code, not the skill's behaviour — a skill whose `scan.py` miscounts lines is broken however well it triggers. Behaviour is Dimension 12.
 
 | Score | Descriptor |
 |-------|------------|
-| 0 | No evals, no test fixtures, no verification mechanism |
-| 1 | Informal testing notes present but no structured evals |
-| 2 | Some eval structure present but assertions missing or happy-path only |
-| 3 | Structured evals with objective assertions where outputs are objective; minor gaps |
-| 4 | Comprehensive eval suite; objective assertions for objective outputs; structure-only checks for subjective outputs |
+| 0 | Scripts are present with no tests of any kind |
+| 1 | A token test or two; most scripts and most logic untested |
+| 2 | Some scripts tested, but significant gaps — core logic paths uncovered |
+| 3 | Most scripts tested with real assertions; minor gaps or happy-path bias |
+| 4 | All scripts tested including edge cases and failure modes; tests verify behaviour rather than mocks |
+
+---
+
+## Dimension 12: Behavioral Evals
+
+Does the skill ship evals that test *the skill itself* — whether it triggers, and whether its output is any good?
+
+**Never N/A.** Every skill has a description that must fire on the right requests and stay quiet on the wrong ones, and output someone must be able to judge.
+
+Two eval types, answering different questions:
+
+- **Trigger evals** (`evals/trigger_eval.json`) — an array of `{query, should_trigger}` pairs. The negative cases matter as much as the positive ones: they catch a description that fires on everything.
+- **Quality evals** (`evals/evals.json`) — task prompts with `expected_output` and `assertions`, proving the skill actually improves the result.
+
+| Score | Descriptor |
+|-------|------------|
+| 0 | No evals of any kind; no way to tell whether the skill triggers or helps |
+| 1 | Informal testing notes or example prompts in prose, but no structured eval files |
+| 2 | Structured eval prompts exist, but assertions are missing, empty, or happy-path only |
+| 3 | Trigger **or** quality evals with real assertions; the other type absent or thin |
+| 4 | Both trigger and quality evals; negative trigger cases present; assertions objective where the output is objective and correctly **absent** where it is subjective |
+
+Do not force assertions onto subjective outputs. A skill that produces prose or design should be evaluated qualitatively; inventing brittle string-match assertions for it scores worse, not better.

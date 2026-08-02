@@ -1,7 +1,7 @@
 [project]
 name = "skill-skill-grader"
 version = "0.1.0"
-description = "Add your description here"
+description = "Grade Claude Skills against a 12-dimension rubric"
 requires-python = ">=3.13"
 dependencies = [
     "jinja2>=3.1.6",
@@ -12,3 +12,10 @@ dependencies = [
 dev = [
     "pytest>=9.1.1",
 ]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# tests/fixtures/ holds deliberately flawed skills used as scanner input. The
+# test files inside them are data describing what a graded skill looks like,
+# not members of this suite — collecting them runs another project's tests.
+norecursedirs = ["tests/fixtures"]

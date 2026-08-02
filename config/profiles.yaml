@@ -1,6 +1,11 @@
 # Weight profiles for skill archetypes.
 # Each dimension weight defaults to 1.0 if omitted.
 # Dimensions listed under `na` are excluded and renormalised.
+#
+# D11 (Script Correctness) is N/A for archetypes that ship no scripts — there
+# is nothing to unit test, and penalising that would punish a correct design.
+# D12 (Behavioral Evals) is never N/A: every skill has a description that must
+# trigger and output that must be good.
 
 profiles:
   workflow:
@@ -9,7 +14,8 @@ profiles:
       4: 1.5    # resource hygiene
       5: 1.5    # script vs prose
       7: 1.5    # output contract
-      11: 1.5   # testability
+      11: 1.5   # script correctness — the scripts are the point
+      12: 1.5   # behavioral evals
 
   style:
     description: "House-style and formatting rules"
@@ -17,7 +23,8 @@ profiles:
       6: 1.5    # instructional voice
       7: 1.5    # output contract
       8: 1.5    # examples
-    na: [11]    # output is judged, not asserted
+      12: 1.5   # behavioral evals — the only verification surface available
+    na: [11]    # no scripts to unit test
 
   reference:
     description: "Domain knowledge, minimal procedure"
@@ -25,7 +32,8 @@ profiles:
       2: 1.5    # trigger surface coverage
       3: 1.5    # progressive disclosure
       4: 1.5    # resource hygiene
-    na: [5, 11] # no scripts expected, no objective assertions
+      12: 1.5   # behavioral evals — triggering is most of what it must get right
+    na: [5, 11] # no scripts expected, so nothing to unit test
 
   balanced:
     description: "Fallback when archetype is unclear"

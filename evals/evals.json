@@ -1,0 +1,67 @@
+{
+  "skill_name": "skill-grader",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Grade the skill at tests/fixtures/gold.",
+      "expected_output": "A high grade with few findings, naming the profile used and the grading mode.",
+      "files": ["tests/fixtures/gold"],
+      "assertions": [
+        "Report names the weight profile it applied",
+        "Report states whether it graded an installed skill or a codebase",
+        "Every one of the 12 dimensions appears in the scorecard",
+        "Overall score is 85 or above",
+        "D12 scores 3 or 4, since the fixture ships both trigger and quality evals"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Grade the skill at tests/fixtures/dim10-unsafe.",
+      "expected_output": "An F capped by a blocker, because the skill claims to analyse code but writes to /tmp and fetches a remote URL.",
+      "files": ["tests/fixtures/dim10-unsafe"],
+      "assertions": [
+        "Produces at least one finding with severity blocker",
+        "The blocker finding is on dimension 10",
+        "Letter grade is F regardless of the weighted score",
+        "Report states that the grade was capped by a blocker",
+        "A finding names the undeclared filesystem write or network fetch"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Grade the skill at tests/fixtures/dim12-no-evals.",
+      "expected_output": "A low D12 score with a finding about missing behavioural evals, while D11 stays high because the scripts are unit tested.",
+      "files": ["tests/fixtures/dim12-no-evals"],
+      "assertions": [
+        "D12 scores 0 or 1",
+        "D11 scores 3 or 4, since scripts/collect_prs.py is covered by unit tests",
+        "A finding states that the skill ships no evals",
+        "The finding does not claim the skill is untested outright, since unit tests are present"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "Grade the installed skill at ~/.claude/skills/skill-grader, then grade this repo, and explain any difference.",
+      "expected_output": "Two grades that differ on D11, each report naming its mode, with the difference explained rather than presented as a contradiction.",
+      "files": [],
+      "assertions": [
+        "The installed run reports mode installed and the repo run reports mode codebase",
+        "D11 is lower for the installed target, because tests/ is not part of the payload",
+        "D12 is equal for both, because evals/ ships with the skill",
+        "The explanation attributes the difference to what the install payload contains, not to a defect"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "Grade a skill that is pure prose with no scripts directory, such as a house-style guide.",
+      "expected_output": "D11 marked N/A and excluded from the weighted total, not scored zero.",
+      "files": [],
+      "assertions": [
+        "D11 is reported as N/A rather than scored 0",
+        "The report lists D11 among the N/A dimensions",
+        "D12 is still scored, since behavioural evals apply to every skill",
+        "The overall score is renormalised over the applicable dimensions"
+      ]
+    }
+  ]
+}

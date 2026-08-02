@@ -6,6 +6,7 @@ All checks are purely mechanical: counts, file graph analysis, pattern matching.
 
 from __future__ import annotations
 
+import json
 import re
 import subprocess
 from pathlib import Path
@@ -24,7 +25,14 @@ CAPS_WORDS = re.compile(
     r"\b(MUST|NEVER|ALWAYS|CRITICAL|IMPORTANT|REQUIRED|SHALL|ABSOLUTELY|MANDATORY)\b"
 )
 
-EVAL_DIRS = {"tests", "test", "evals", "eval"}
+# Two distinct verification surfaces. Unit tests cover the bundled scripts and
+# only apply when a skill ships code; evals cover the skill's own behaviour and
+# apply to every skill. Conflating them lets pytest coverage stand in for never
+# having tested whether the skill triggers.
+UNIT_TEST_DIRS = {"tests", "test"}
+EVAL_DIRS = {"evals", "eval"}
+
+TEST_FILE = re.compile(r"(^test_.*\.py$|_test\.py$|\.test\.[jt]sx?$|_spec\.rb$)")
 
 # Files scanned for references to other bundled files. Includes scripts, since
 # a template or config loaded by code is referenced just as surely as one named
@@ -258,14 +266,71 @@ def _find_large_refs_without_toc(skill_path: Path) -> list[str]:
     return sorted(result)
 
 
-def _has_evals(skill_path: Path) -> bool:
-    """Check for tests/, test/, evals/, eval/ directories with files."""
+def _has_unit_tests(skill_path: Path) -> bool:
+    """True if tests/ or test/ holds recognisable test files.
+
+    A directory alone is not enough — a bare conftest.py or fixtures folder
+    verifies nothing.
+    """
+    for dir_name in UNIT_TEST_DIRS:
+        d = skill_path / dir_name
+        if not d.is_dir():
+            continue
+        for p in d.rglob("*"):
+            if p.is_file() and TEST_FILE.search(p.name):
+                return True
+    return False
+
+
+def _scan_evals(skill_path: Path) -> dict:
+    """Classify the eval files a skill ships.
+
+    Follows the skill-creator convention: evals/trigger_eval.json holds
+    {query, should_trigger} pairs proving the description fires correctly,
+    and evals/evals.json holds task prompts with assertions proving the
+    output is any good. They answer different questions, so both are tracked.
+    """
+    result = {
+        "has_trigger_evals": False,
+        "has_quality_evals": False,
+        "has_eval_assertions": False,
+        "eval_files": [],
+    }
+
     for dir_name in EVAL_DIRS:
         d = skill_path / dir_name
-        if d.is_dir():
-            for p in d.rglob("*"):
-                if p.is_file():
-                    return True
+        if not d.is_dir():
+            continue
+        for p in sorted(d.rglob("*.json")):
+            if not p.is_file():
+                continue
+            result["eval_files"].append(str(p.relative_to(skill_path)))
+            try:
+                data = json.loads(p.read_text(encoding="utf-8", errors="replace"))
+            except (OSError, ValueError):
+                continue
+            blob = json.dumps(data)
+            if "should_trigger" in blob:
+                result["has_trigger_evals"] = True
+            if '"prompt"' in blob or "expected_output" in blob:
+                result["has_quality_evals"] = True
+            if "assertions" in blob:
+                # An empty assertions list is a placeholder, not a check.
+                result["has_eval_assertions"] = _any_nonempty_assertions(data)
+
+    return result
+
+
+def _any_nonempty_assertions(data) -> bool:
+    """Walk parsed eval JSON for an assertions list with entries in it."""
+    if isinstance(data, dict):
+        for key, value in data.items():
+            if key == "assertions" and isinstance(value, list) and value:
+                return True
+            if _any_nonempty_assertions(value):
+                return True
+    elif isinstance(data, list):
+        return any(_any_nonempty_assertions(item) for item in data)
     return False
 
 
@@ -408,7 +473,8 @@ def scan_skill(skill_path: Path) -> dict:
     )
 
     # Has evals
-    has_evals = _has_evals(skill_path)
+    has_unit_tests = _has_unit_tests(skill_path)
+    evals = _scan_evals(skill_path)
 
     # Duplicated blocks
     duplicated_blocks = _find_duplicated_blocks(skill_path, skill_text, bundled)
@@ -426,7 +492,13 @@ def scan_skill(skill_path: Path) -> dict:
         "caps_lines": caps_lines,
         "large_refs_without_toc": large_refs_without_toc,
         "has_scripts": has_scripts,
-        "has_evals": has_evals,
+        "has_unit_tests": has_unit_tests,
+        "has_trigger_evals": evals["has_trigger_evals"],
+        "has_quality_evals": evals["has_quality_evals"],
+        "has_eval_assertions": evals["has_eval_assertions"],
+        "eval_files": evals["eval_files"],
+        # Union, for the D12 floor and for callers that only need "any evals".
+        "has_evals": evals["has_trigger_evals"] or evals["has_quality_evals"],
         "duplicated_blocks": duplicated_blocks,
         "bundled_files": bundled,
         "referenced_files": referenced,

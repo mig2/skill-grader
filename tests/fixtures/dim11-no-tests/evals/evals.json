@@ -1,0 +1,26 @@
+{
+  "skill_name": "commit-message-writer",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Write a commit message for this diff, which adds a caching layer to the user lookup.",
+      "expected_output": "A conventional commit with a feat type and a scope.",
+      "files": ["fixtures/cache-diff.patch"],
+      "assertions": [
+        "Subject line uses a conventional-commit type prefix",
+        "Subject line is 72 characters or fewer",
+        "Body explains why the change was made, not only what changed"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "This diff removes a public API endpoint. Write the commit message.",
+      "expected_output": "A conventional commit marked as breaking, with a BREAKING CHANGE footer.",
+      "files": ["fixtures/remove-endpoint.patch"],
+      "assertions": [
+        "Marks the change as breaking with a ! or a BREAKING CHANGE footer",
+        "Footer names the migration path"
+      ]
+    }
+  ]
+}

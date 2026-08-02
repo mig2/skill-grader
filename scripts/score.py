@@ -20,7 +20,8 @@ DIMENSION_NAMES = {
     8: "Examples",
     9: "Environment Portability",
     10: "Least Surprise / Safety",
-    11: "Testability",
+    11: "Script Correctness",
+    12: "Behavioral Evals",
 }
 
 # (minimum_score, grade) — checked in order, first match wins

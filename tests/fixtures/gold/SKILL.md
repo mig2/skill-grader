@@ -102,10 +102,13 @@ No network access is required. No files are written outside the session.
 |------|---------|
 | `references/guide.md` | Document-type heuristics and classification rules |
 | `scripts/process.py` | Metadata extraction script |
-| `tests/test_eval.py` | Eval suite for grading summarisation quality |
+| `tests/test_eval.py` | Unit tests for the metadata extraction script |
+| `evals/trigger_eval.json` | Trigger eval — queries that should and should not invoke this skill |
+| `evals/evals.json` | Quality evals — task prompts with assertions on the summary produced |
 
 ## References
 
 - See `references/guide.md` for full document-type classification rules.
 - See `scripts/process.py --help` for script usage.
-- See `tests/test_eval.py` for the eval suite.
+- See `tests/test_eval.py` for the script unit tests.
+- See `evals/trigger_eval.json` and `evals/evals.json` for the behavioural evals.

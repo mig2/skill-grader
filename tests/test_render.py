@@ -6,7 +6,7 @@ from scripts.score import DIMENSION_NAMES
 
 def _make_grade_result(overall=75.0, grade="C", blockers=False):
     """Build a minimal grade result for testing."""
-    scores = {i: 3 for i in range(1, 12)}
+    scores = {i: 3 for i in range(1, 13)}
     return {
         "overall_score": overall,
         "letter_grade": grade,
@@ -17,7 +17,7 @@ def _make_grade_result(overall=75.0, grade="C", blockers=False):
         "dimension_details": {
             i: {"name": DIMENSION_NAMES[i], "score": 3, "weight": 1.0,
                 "weighted_contribution": 3.0}
-            for i in range(1, 12)
+            for i in range(1, 13)
         },
         "findings": [
             {

@@ -1,0 +1,15 @@
+[
+  {"query": "Summarise this quarterly report for me", "should_trigger": true},
+  {"query": "Can you give me the gist of this document?", "should_trigger": true},
+  {"query": "TL;DR on the attached spec please", "should_trigger": true},
+  {"query": "What are the key points in these meeting notes?", "should_trigger": true},
+  {"query": "I don't have time to read all this — condense it", "should_trigger": true},
+  {"query": "Pull out the main arguments from this article", "should_trigger": true},
+
+  {"query": "Translate this document into French", "should_trigger": false},
+  {"query": "Fix the grammar in this paragraph", "should_trigger": false},
+  {"query": "Write me a new report about quarterly earnings", "should_trigger": false},
+  {"query": "How many words is this document?", "should_trigger": false},
+  {"query": "Convert this PDF to a Word file", "should_trigger": false},
+  {"query": "Summarise what we discussed earlier in this conversation", "should_trigger": false}
+]

@@ -16,8 +16,9 @@ SEVERITY_ORDER = ["blocker", "major", "minor", "nit"]
 # skill and its source repo are different objects and score differently.
 MODE_NOTES = {
     "installed": (
-        "Evaluating the installed skill. D11 (Testability) reflects what "
-        "ships — for full coverage, grade the source codebase."
+        "Evaluating the installed skill. D11 (Script Correctness) reflects "
+        "what ships, and unit tests normally do not — for full coverage, "
+        "grade the source codebase."
     ),
     "codebase": (
         "Evaluating the skill codebase. Repo furniture (docs/, README) is "
@@ -107,7 +108,7 @@ def render_markdown(grade_result: dict) -> str:
         lines.append("| # | Dimension | Score | Weight |")
         lines.append("|---|-----------|-------|--------|")
 
-    for dim_num in range(1, 12):
+    for dim_num in sorted(DIMENSION_NAMES):
         name = DIMENSION_NAMES.get(dim_num, f"Dim {dim_num}")
         is_na = dim_num in na_dims
 
@@ -212,7 +213,7 @@ def render_html(grade_result: dict) -> str:
     # Build dimensions list
     has_delta = delta is not None
     dimensions = []
-    for dim_num in range(1, 12):
+    for dim_num in sorted(DIMENSION_NAMES):
         name = DIMENSION_NAMES.get(dim_num, f"Dim {dim_num}")
         is_na = dim_num in na_dims
         # Keys may be int or str after JSON round-trip

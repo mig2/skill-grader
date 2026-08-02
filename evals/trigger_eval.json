@@ -1,0 +1,27 @@
+[
+  {"query": "Grade this skill", "should_trigger": true},
+  {"query": "Is this skill any good?", "should_trigger": true},
+  {"query": "What's wrong with my SKILL.md?", "should_trigger": true},
+  {"query": "Review the quality of ~/.claude/skills/mishnah", "should_trigger": true},
+  {"query": "Score this skill against the rubric", "should_trigger": true},
+  {"query": "Run skill-grader on the code-audit skill", "should_trigger": true},
+  {"query": "Why isn't my skill triggering? Check the description", "should_trigger": true},
+  {"query": "Audit this skill for me", "should_trigger": true},
+  {"query": "Give me a report card on every skill in ~/.claude/skills", "should_trigger": true},
+  {"query": "Does this skill follow best practices for skill authoring?", "should_trigger": true},
+  {"query": "/skill-grader", "should_trigger": true},
+  {"query": "Check whether my skill ships evals", "should_trigger": true},
+
+  {"query": "Audit this codebase for security issues", "should_trigger": false},
+  {"query": "Run a tech debt report on this repo", "should_trigger": false},
+  {"query": "Review this pull request", "should_trigger": false},
+  {"query": "How good is this codebase?", "should_trigger": false},
+  {"query": "Write me a new skill for summarising documents", "should_trigger": false},
+  {"query": "Fix the problems you found in my SKILL.md", "should_trigger": false},
+  {"query": "Rewrite this skill description to trigger better", "should_trigger": false},
+  {"query": "What is a Claude Skill?", "should_trigger": false},
+  {"query": "Install the code-audit skill", "should_trigger": false},
+  {"query": "Grade this student essay", "should_trigger": false},
+  {"query": "Run the tests in this repo", "should_trigger": false},
+  {"query": "Explain how progressive disclosure works in skills", "should_trigger": false}
+]

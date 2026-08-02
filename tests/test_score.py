@@ -29,25 +29,25 @@ class TestLoadProfiles:
 
 class TestComputeScore:
     def test_perfect_score_balanced(self):
-        scores = {i: 4 for i in range(1, 12)}
+        scores = {i: 4 for i in range(1, 13)}
         result = compute_score(scores, "balanced", PROFILES_PATH)
         assert result["overall_score"] == 100.0
         assert result["letter_grade"] == "A+"
 
     def test_zero_score(self):
-        scores = {i: 0 for i in range(1, 12)}
+        scores = {i: 0 for i in range(1, 13)}
         result = compute_score(scores, "balanced", PROFILES_PATH)
         assert result["overall_score"] == 0.0
 
     def test_na_dimensions_excluded(self):
-        scores = {i: 4 for i in range(1, 12)}
+        scores = {i: 4 for i in range(1, 13)}
         scores[11] = 0  # testability — N/A for style
         result = compute_score(scores, "style", PROFILES_PATH)
         assert result["overall_score"] == 100.0
         assert 11 in result["na_dimensions"]
 
     def test_blocker_caps_grade(self):
-        scores = {i: 4 for i in range(1, 12)}
+        scores = {i: 4 for i in range(1, 13)}
         result = compute_score(
             scores, "balanced", PROFILES_PATH, blockers=True,
         )
@@ -55,7 +55,7 @@ class TestComputeScore:
         assert result["capped_by_blocker"] is True
 
     def test_weighted_mean_differs_from_flat(self):
-        scores = {i: 2 for i in range(1, 12)}
+        scores = {i: 2 for i in range(1, 13)}
         scores[5] = 4  # script vs prose — elevated in workflow
         result_wf = compute_score(scores, "workflow", PROFILES_PATH)
         result_bal = compute_score(scores, "balanced", PROFILES_PATH)
@@ -81,19 +81,19 @@ class TestLetterGrade:
 
 class TestComputeDelta:
     def test_no_baseline_returns_none(self):
-        current = {i: 3 for i in range(1, 12)}
+        current = {i: 3 for i in range(1, 13)}
         delta = compute_delta(current, None)
         assert delta is None
 
     def test_delta_reports_changes(self):
-        old = {i: 2 for i in range(1, 12)}
-        new = {i: 3 for i in range(1, 12)}
+        old = {i: 2 for i in range(1, 13)}
+        new = {i: 3 for i in range(1, 13)}
         new[1] = 1  # regression
         delta = compute_delta(new, old)
         assert delta[1] == -1  # regression
         assert delta[2] == +1  # improvement
 
     def test_delta_no_change(self):
-        scores = {i: 3 for i in range(1, 12)}
+        scores = {i: 3 for i in range(1, 13)}
         delta = compute_delta(scores, scores)
         assert all(v == 0 for v in delta.values())

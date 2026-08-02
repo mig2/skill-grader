@@ -1,0 +1,36 @@
+{
+  "skill_name": "document-summariser",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Summarise the attached quarterly report.",
+      "expected_output": "A summary using the report template, leading with the headline financial result.",
+      "files": ["fixtures/q3-report.md"],
+      "assertions": [
+        "Uses the report template, not the article or meeting-notes template",
+        "States the document type it detected before summarising",
+        "Summary is shorter than one quarter of the source length"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Give me the key points from these meeting notes.",
+      "expected_output": "A summary using the meeting-notes template with decisions and action items separated.",
+      "files": ["fixtures/standup-notes.md"],
+      "assertions": [
+        "Separates decisions from action items",
+        "Attributes each action item to a named owner where the source names one"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Summarise this document.",
+      "expected_output": "Handles an ambiguous type gracefully by falling back to the generic template rather than guessing.",
+      "files": ["fixtures/untyped.md"],
+      "assertions": [
+        "Falls back to the generic template rather than forcing a specific one",
+        "Says which type it could not determine"
+      ]
+    }
+  ]
+}
