@@ -143,3 +143,16 @@ This skill is graded by its own D12, so the repo carries evals. They are not par
 - `evals/evals.json` — task prompts with assertions, graded against the fixtures in `tests/fixtures/` so expected outcomes are known.
 
 Assertions here are objective because the output is objective: a grade, a set of dimension scores, and findings. Do not add assertions of this kind when grading a skill whose output is prose or design — judge those qualitatively instead.
+
+---
+
+## Issue log
+
+Work is tracked on GitHub and mirrored in `issues.md`. The two drift silently — an issue closed but never logged, an entry for something reopened, or a run of commits with no issue behind them. Check with:
+
+```bash
+uv run python scripts/sync_issues.py
+uv run python scripts/sync_issues.py --repo mig2/code-audit --path ~/Code/skill-audit
+```
+
+It is read-only and exits non-zero on any discrepancy, so it can gate a commit.

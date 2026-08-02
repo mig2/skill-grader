@@ -146,6 +146,48 @@ Tracked on GitHub at [mig2/skill-grader](https://github.com/mig2/skill-grader/is
 - **Commit:** 059f18f
 - **Closed:** 2026-07-29
 
+### #20 — D11 Testability accepts unit tests as proof the skill was evaluated
+- **Labels:** bug
+- **Description:** `_has_evals` returned true for any of `tests/`, `test/`, `evals/`, `eval/`, so pytest coverage of bundled scripts satisfied a dimension whose own text asked whether the skill's outputs were verified. Both graded skills scored 3/4 on unit tests alone, having never been tested as skills.
+- **Resolution:** Split into D11 Script Correctness (N/A when no `scripts/`) and D12 Behavioral Evals (never N/A). `scan.py` reports `has_unit_tests`, `has_trigger_evals`, `has_quality_evals` and `has_eval_assertions` separately, following the skill-creator convention of `evals/trigger_eval.json` and `evals/evals.json`. Empty assertion lists are placeholders and do not count. Re-grades: skill-grader B 86.5 → A- 90.5, skill-audit B+ 87.5 → C 75.9.
+- **Commit:** 468664d
+- **Closed:** 2026-08-02
+
+### #21 — evals/ does not belong in the install payload
+- **Labels:** bug
+- **Description:** `install.sh` copied `evals/` into the payload, justified as making D12 scoreable on an installed target — bending the artifact to suit the measurement. Nothing consults `evals/` at runtime.
+- **Resolution:** Removed from the payload. Of the official plugins, none distribute `tests/` and only one distributes `evals/`.
+- **Commit:** 682019d
+- **Closed:** 2026-08-02
+
+### #22 — Install stamp records only a bare hash, so drift cannot be checked
+- **Labels:** enhancement
+- **Description:** `.installed-from` held a short commit hash, which names a commit but not the repo it belongs to, so the source could not be located and the payload could not be compared against it. Installing from a dirty tree also recorded a commit that did not describe what was copied.
+- **Resolution:** The stamp is now JSON with `source_path`, `source_remote`, full `commit`, `branch`, `installed_at` and `dirty`. Drift is measured against payload paths only, so a docs-only commit does not read as stale. Legacy bare-hash stamps are reported as unverifiable rather than current. The same fix was filed and applied upstream as code-audit#11.
+- **Commit:** 8b78d3b
+- **Closed:** 2026-08-02
+
+### #23 — Installed targets score 0 on dimensions they cannot evidence
+- **Labels:** bug
+- **Description:** D11 and D12 scored 0 on an installed skill because neither `tests/` nor `evals/` is payload. Every installed skill got those zeros regardless of quality — a constant rather than a measurement — dragging an otherwise A- install to D+.
+- **Resolution:** Excluded for a target reason instead of scored zero. Superseded in part by #25.
+- **Commit:** 8b78d3b
+- **Closed:** 2026-08-02
+
+### #24 — Report shows the default weight for every dimension, and renders a zero score as unknown
+- **Labels:** bug
+- **Description:** `compute_score` never returned `dimension_details` and `render.py` tolerated its absence. The Weight column printed the 1.0 default for every row, making a weighted profile indistinguishable from a flat one, and the fallback path ran `score or "?"` so a legitimate 0 rendered as unknown.
+- **Resolution:** `compute_score` builds the breakdown with the weight actually applied; the renderer tests for `None` rather than truthiness.
+- **Commit:** 8ad0629
+- **Closed:** 2026-08-02
+
+### #25 — Excluding unscoreable dimensions makes an installed target outrank its own codebase
+- **Labels:** bug
+- **Description:** Exclusion renormalises over the remaining dimensions, so a target carrying less evidence scored higher than a complete one. code-audit graded A- 92.4 installed against C+ 78.4 for its own repo.
+- **Resolution:** A partial assessment reports no overall grade — per-dimension scores, findings and provenance only. `na_dimensions` and `unscoreable_dimensions` are tracked separately and render as "N/A" versus "not assessable", since calling a dimension inapplicable when it is merely unmeasured is a different claim.
+- **Commit:** 84d1110
+- **Closed:** 2026-08-02
+
 ## Open
 
 None.

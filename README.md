@@ -123,7 +123,8 @@ skill-grader/
 │   ├── static-checks.md     # mechanical vs. judged
 │   ├── empirical.md         # Mode B delegation to skill-creator
 │   └── issue-import.md      # gh one-liner, labels, dedup
-├── scripts/                 # scan, detect_profile, score, render, emit_issues
+├── scripts/                 # scan, detect_profile, score, render, emit_issues,
+│                            # sync_issues (issues.md <-> GitHub reconciliation)
 ├── assets/                  # report CSS and HTML templates
 ├── config/profiles.yaml     # weight profiles
 ├── evals/
