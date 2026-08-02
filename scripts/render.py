@@ -158,9 +158,10 @@ def render_markdown(grade_result: dict) -> str:
             weight_cell = "—"
         else:
             detail = _get_flex(dimension_details, dim_num) or {}
-            score = detail.get("score") if detail else (_get_flex(dimension_scores, dim_num) or "?")
+            # A score of 0 is falsy but entirely valid — test for None.
+            score = detail.get("score") if detail else _get_flex(dimension_scores, dim_num)
             weight = detail.get("weight", 1.0) if detail else 1.0
-            score_cell = f"{score} / 4"
+            score_cell = f"{score} / 4" if score is not None else "? / 4"
             weight_cell = str(weight)
 
         if has_delta_col:

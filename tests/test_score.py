@@ -133,3 +133,26 @@ class TestUnscoreableDimensions:
         )
         assert gr["overall_score"] == 100.0
         assert sorted(gr["na_dimensions"]) == [11, 12]
+
+
+class TestDimensionDetails:
+    """The report needs the weight actually applied, not the default."""
+
+    def test_details_carry_profile_weights(self):
+        scores = {i: 3 for i in range(1, 13)}
+        r = compute_score(scores, "workflow", PROFILES_PATH)
+        d = r["dimension_details"]
+        assert d[5]["weight"] == 1.5   # script vs prose, weighted up
+        assert d[1]["weight"] == 1.0   # not weighted
+        assert d[5]["weighted_contribution"] == 4.5
+
+    def test_zero_score_is_present_not_missing(self):
+        scores = {i: 3 for i in range(1, 13)}
+        scores[12] = 0
+        r = compute_score(scores, "workflow", PROFILES_PATH)
+        assert r["dimension_details"][12]["score"] == 0
+
+    def test_na_dimensions_absent_from_details(self):
+        scores = {i: 3 for i in range(1, 13)}
+        r = compute_score(scores, "style", PROFILES_PATH)
+        assert 11 not in r["dimension_details"]

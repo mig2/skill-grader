@@ -153,3 +153,24 @@ class TestStalenessNote:
             self._scan(checked=True, commits_behind=0, dirty_at_install=True)["scan"]
         )
         assert "uncommitted" in note
+
+
+class TestZeroScoreRendering:
+    def test_zero_renders_as_zero_not_question_mark(self):
+        result = _make_grade_result()
+        result["dimension_details"] = {}
+        result["dimension_scores"][12] = 0
+        md = render_markdown(result)
+        row = [l for l in md.splitlines() if l.startswith("| 12 |")][0]
+        assert "0 / 4" in row
+        assert "?" not in row
+
+    def test_weight_column_reflects_details(self):
+        result = _make_grade_result()
+        result["dimension_details"][5] = {
+            "name": "Script vs. Prose Allocation", "score": 3,
+            "weight": 1.5, "weighted_contribution": 4.5,
+        }
+        md = render_markdown(result)
+        row = [l for l in md.splitlines() if l.startswith("| 5 |")][0]
+        assert "1.5" in row

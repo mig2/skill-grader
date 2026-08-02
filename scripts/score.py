@@ -121,6 +121,19 @@ def compute_score(
     else:
         letter = to_letter_grade(overall)
 
+    # Per-dimension breakdown. Without this the report cannot show the weight
+    # actually applied, and silently prints the 1.0 default for every row —
+    # which makes a weighted profile indistinguishable from a flat one.
+    dimension_details = {
+        dim: {
+            "name": DIMENSION_NAMES.get(dim, f"Dim {dim}"),
+            "score": score,
+            "weight": weights.get(dim, 1.0),
+            "weighted_contribution": score * weights.get(dim, 1.0),
+        }
+        for dim, score in sorted(applicable.items())
+    }
+
     return {
         "overall_score": overall,
         "letter_grade": letter,
@@ -128,6 +141,7 @@ def compute_score(
         "capped_by_blocker": blockers,
         "profile": profile_name,
         "dimension_scores": dimension_scores,
+        "dimension_details": dimension_details,
     }
 
 
