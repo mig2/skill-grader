@@ -137,7 +137,7 @@ Full anchored descriptors are in `references/rubric.md`. This table is a navigat
 
 ## Evals
 
-This skill is graded by its own D12, so it ships evals:
+This skill is graded by its own D12, so the repo carries evals. They are not part of the install payload — nothing reads them at runtime:
 
 - `evals/trigger_eval.json` — queries that should and should not invoke skill-grader. The negative cases cover the sibling collision with `code-audit` and requests to *fix* rather than *diagnose*.
 - `evals/evals.json` — task prompts with assertions, graded against the fixtures in `tests/fixtures/` so expected outcomes are known.

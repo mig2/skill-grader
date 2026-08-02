@@ -16,9 +16,9 @@ SEVERITY_ORDER = ["blocker", "major", "minor", "nit"]
 # skill and its source repo are different objects and score differently.
 MODE_NOTES = {
     "installed": (
-        "Evaluating the installed skill. D11 (Script Correctness) reflects "
-        "what ships, and unit tests normally do not — for full coverage, "
-        "grade the source codebase."
+        "Evaluating the installed skill. Neither tests nor evals belong in an "
+        "install payload, so D11 and D12 describe the deployed surface only — "
+        "grade the source codebase to say anything about verification."
     ),
     "codebase": (
         "Evaluating the skill codebase. Repo furniture (docs/, README) is "

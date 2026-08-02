@@ -42,13 +42,13 @@
     {
       "id": 4,
       "prompt": "Grade the installed skill at ~/.claude/skills/skill-grader, then grade this repo, and explain any difference.",
-      "expected_output": "Two grades that differ on D11, each report naming its mode, with the difference explained rather than presented as a contradiction.",
+      "expected_output": "Two grades that differ on D11 and D12, each report naming its mode, with the difference explained rather than presented as a contradiction.",
       "files": [],
       "assertions": [
         "The installed run reports mode installed and the repo run reports mode codebase",
-        "D11 is lower for the installed target, because tests/ is not part of the payload",
-        "D12 is equal for both, because evals/ ships with the skill",
-        "The explanation attributes the difference to what the install payload contains, not to a defect"
+        "Both D11 and D12 are 0 for the installed target, since neither tests/ nor evals/ is payload",
+        "Both are higher for the codebase target",
+        "The explanation attributes the difference to what the install payload contains, not to a defect in the skill"
       ]
     },
     {

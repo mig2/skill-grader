@@ -75,14 +75,14 @@ Marking a dimension N/A excludes it and renormalises the total rather than scori
 
 ## Grading target: installed skill vs. codebase
 
-An installed skill and its source repo are different objects and legitimately score differently. The installed copy ships without unit tests; the repo carries docs and plans. `scan.py` detects which it is looking at — via `.installed-from`, then `.git`, then location — and the report names it.
+An installed skill and its source repo are different objects and legitimately score differently. The installed copy carries neither tests nor evals; the repo carries those plus docs and plans. `scan.py` detects which it is looking at — via `.installed-from`, then `.git`, then location — and the report names it.
 
 | Target | D4 Resource Hygiene | D11 Script Correctness | D12 Behavioral Evals |
 |--------|---------------------|------------------------|----------------------|
-| Installed skill | Counts everything present | Reflects what ships (often 0) | Unaffected — `evals/` ships |
-| Source codebase | Ignores repo furniture and gitignored output | Sees `tests/` | Unaffected |
+| Installed skill | Counts everything present | 0 — `tests/` is not payload | 0 — `evals/` is not payload |
+| Source codebase | Ignores repo furniture and gitignored output | Sees `tests/` | Sees `evals/` |
 
-`evals/` is small JSON that defines correctness for the deployed thing, so `install.sh` ships it. `tests/` is not shipped, which is why D11 is the dimension that moves between targets.
+An install payload is what the skill reads or executes while running, and nothing consults `tests/` or `evals/` at runtime. So an installed target cannot speak to verification at all: both dimensions read 0 and the report points at the codebase. Resist the temptation to ship them just to lift the score — that bends the artifact to suit the measurement.
 
 Grade both for the full picture. A path symlinked into the skills directory resolves to its real location and reads as a codebase.
 
